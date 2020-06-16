@@ -1,10 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <navigation xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto" android:id="@+id/nav_graph.xml"
+    xmlns:app="http://schemas.android.com/apk/res-auto" android:id="@+id/nav_graph"
     app:startDestination="@id/deviceListFragment">
 
     <fragment
         android:id="@+id/deviceListFragment"
-        android:name="com.anookday.rpistream.device.DeviceListFragment"
-        android:label="DeviceListFragment" />
+        android:name="com.anookday.rpistream.fragments.DeviceListFragment"
+        android:label="DeviceListFragment" >
+        <action
+            android:id="@+id/action_deviceListFragment_to_deviceDetailFragment"
+            app:destination="@id/deviceDetailFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/deviceDetailFragment"
+        android:name="com.anookday.rpistream.fragments.DeviceDetailFragment"
+        android:label="DeviceDetailFragment">
+        <argument
+            android:name="device"
+            app:argType="com.anookday.rpistream.device.StreamDevice" />
+    </fragment>
 </navigation>

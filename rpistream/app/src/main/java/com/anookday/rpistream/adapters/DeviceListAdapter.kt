@@ -1,4 +1,4 @@
-package com.anookday.rpistream.device
+package com.anookday.rpistream.adapters
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
@@ -6,11 +6,14 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.anookday.rpistream.databinding.DeviceListItemBinding
+import com.anookday.rpistream.device.StreamDevice
 
 /**
  * [ListAdapter] class for [RecyclerView] in [DeviceListFragment].
  */
-class DeviceListAdapter: ListAdapter<StreamDevice, DeviceListAdapter.ViewHolder>(DiffCallback) {
+class DeviceListAdapter(private val clickListener: DeviceClickListener): ListAdapter<StreamDevice, DeviceListAdapter.ViewHolder>(
+    DiffCallback
+) {
 
     companion object DiffCallback: DiffUtil.ItemCallback<StreamDevice>() {
         override fun areItemsTheSame(oldItem: StreamDevice, newItem: StreamDevice): Boolean {
@@ -23,8 +26,9 @@ class DeviceListAdapter: ListAdapter<StreamDevice, DeviceListAdapter.ViewHolder>
     }
 
     class ViewHolder (private val binding: DeviceListItemBinding): RecyclerView.ViewHolder(binding.root) {
-        fun bind(device: StreamDevice) {
+        fun bind(clickListener: DeviceClickListener, device: StreamDevice) {
             binding.device = device
+            binding.clickListener = clickListener
             binding.executePendingBindings()
         }
     }
@@ -32,13 +36,20 @@ class DeviceListAdapter: ListAdapter<StreamDevice, DeviceListAdapter.ViewHolder>
     override fun onCreateViewHolder(
         parent: ViewGroup,
         viewType: Int
-    ): DeviceListAdapter.ViewHolder {
-        return ViewHolder(DeviceListItemBinding.inflate(LayoutInflater.from(parent.context)))
+    ): ViewHolder {
+        return ViewHolder(
+            DeviceListItemBinding.inflate(LayoutInflater.from(parent.context))
+        )
     }
 
-    override fun onBindViewHolder(holder: DeviceListAdapter.ViewHolder, position: Int) {
-        val device = getItem(position)
-        holder.bind(device)
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        holder.bind(clickListener, getItem(position)!!)
     }
+}
 
+/**
+ * Click listener for [DeviceListAdapter].
+ */
+class DeviceClickListener(val clickListener: (device: StreamDevice) -> Unit) {
+    fun onClick(d: StreamDevice) = clickListener(d)
 }
