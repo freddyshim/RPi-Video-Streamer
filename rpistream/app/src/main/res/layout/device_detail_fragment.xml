@@ -6,7 +6,7 @@
     <data>
         <variable
             name="viewModel"
-            type="com.anookday.rpistream.viewmodels.DeviceListViewModel" />
+            type="com.anookday.rpistream.viewmodels.DeviceDetailViewModel" />
     </data>
     
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -14,6 +14,60 @@
         android:layout_height="match_parent"
         tools:context="com.anookday.rpistream.MainActivity" >
 
+        <TextView
+            android:id="@+id/deviceID"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@{String.valueOf(viewModel.device.device.deviceId)}"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="Device ID" />
+
+        <TextView
+            android:id="@+id/deviceName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@{viewModel.device.device.deviceName}"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/deviceID"
+            tools:text="Device Name" />
+
+        <TextView
+            android:id="@+id/manufacturerName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@{viewModel.device.device.manufacturerName}"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/deviceName"
+            tools:text="Manufacturer Name" />
+
+        <TextView
+            android:id="@+id/productName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@{viewModel.device.device.productName}"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/manufacturerName"
+            tools:text="Product Name" />
+
+        <TextView
+            android:id="@+id/streamOutput"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="32dp"
+            android:textSize="30sp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            tools:text="0" />
     </androidx.constraintlayout.widget.ConstraintLayout>
     
 </layout>

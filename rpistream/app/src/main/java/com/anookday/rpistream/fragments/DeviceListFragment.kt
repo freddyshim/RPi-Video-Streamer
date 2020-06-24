@@ -44,10 +44,12 @@ class DeviceListFragment: Fragment() {
         val usbManager = mContext.getSystemService(Context.USB_SERVICE) as UsbManager
         val deviceList: HashMap<String, UsbDevice> = usbManager.deviceList
 
+        // get user permission to connect to USB devices
+        deviceList.forEach { usbManager.requestPermission(it.value, mPermissionIntent) }
+
         // initialize recyclerview
         binding.deviceListItem.adapter =
             DeviceListAdapter(DeviceClickListener { device ->
-                usbManager.requestPermission(device.device, mPermissionIntent)
                 viewModel.onDeviceClicked(device)
             })
 
