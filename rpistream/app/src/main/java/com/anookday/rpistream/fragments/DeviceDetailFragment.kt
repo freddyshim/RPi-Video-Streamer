@@ -52,7 +52,7 @@ class DeviceDetailFragment: Fragment() {
                 usbDevice = device.device
                 usbInterface = usbDevice.getInterface(0)
                 usbDeviceConnection = usbManager.openDevice(usbDevice)
-                usbDeviceConnection.claimInterface(usbInterface, false)
+                usbDeviceConnection.claimInterface(usbInterface, true)
                 for (i in 0 until usbInterface.endpointCount) {
                     val endpoint = usbInterface.getEndpoint(i)
                     if (endpoint.direction == UsbConstants.USB_DIR_IN) {
