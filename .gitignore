@@ -37,5 +37,6 @@ ehthumbs.db
 Thumbs.db
 
 # LibUVCCamera library-specific files
+rpistream/libuvccamera/build/
 rpistream/libuvccamera/src/main/obj/
 rpistream/libuvccamera/src/main/libs/
