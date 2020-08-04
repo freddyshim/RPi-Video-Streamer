@@ -14,7 +14,7 @@ android {
     defaultConfig {
         applicationId "com.anookday.rpistream"
         minSdkVersion 26
-        targetSdkVersion 29
+        targetSdkVersion 27
         versionCode 1
         versionName "1.0"
 
@@ -57,4 +57,7 @@ dependencies {
     implementation "androidx.room:room-runtime:$version_room"
     kapt "androidx.room:room-compiler:$version_room"
     implementation "androidx.room:room-ktx:$version_room"
+    // LibUVCCamera: USB Camera utility
+    implementation "com.serenegiant:common:${commonLibVersion}"
+    implementation project(":libuvccamera")
 }
