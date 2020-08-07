@@ -4,6 +4,7 @@ Connect a Raspberry Pi w/ a camera module to an Android device and stream the iv
 
 Raspberry Pi Setup
 -------
+
 ### 1. Enabling OTG
 We need to edit some files on Raspberry Pi's boot disk. Add the following line at the bottom of /boot/config.txt:
 ```
@@ -17,6 +18,7 @@ If you own a Raspberry Pi Zero W and would like to debug over a WiFi connection,
 ```
 touch ssh
 ```
+
 ### 2. Enable Camera
 Connect your camera module to the Raspberry Pi if you already haven't done so. Then, you can find the menu to enable the camera by running the command:
 ```
@@ -49,11 +51,14 @@ Android Streaming App
 -------
 Our Android app needs to find the connected UVC gadget at the USB port and retrieve the video feed from the camera module. In order to achieve this, we will use the following library:
 https://github.com/saki4510t/UVCCamera
+
 ### How to Compile the App
-# 1. Download NDK
+
+##### 1. Download NDK
 This app has been tested with NDK version 14 which you cannot donwload directly from Android Studio. Google provides download mirrors for older versions of NDK (<16) in the following link: 
 https://developer.android.com/ndk/downloads/older_releases
-# 2. Compile in Android Studio
+
+##### 2. Compile in Android Studio
 Clone this repository to your desired location and open the "rpistream" directory in Android Studio. Then, add the following line at the botoom of file "local.properties":
 ```
 ndk.dir={NDK_LOCATION}
