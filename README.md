@@ -49,4 +49,14 @@ Android Streaming App
 -------
 Our Android app needs to find the connected UVC gadget at the USB port and retrieve the video feed from the camera module. In order to achieve this, we will use the following library:
 https://github.com/saki4510t/UVCCamera
-
+### How to Compile the App
+# 1. Download NDK
+This app has been tested with NDK version 14 which you cannot donwload directly from Android Studio. Google provides download mirrors for older versions of NDK (<16) in the following link: 
+https://developer.android.com/ndk/downloads/older_releases
+# 2. Compile in Android Studio
+Clone this repository to your desired location and open the "rpistream" directory in Android Studio. Then, add the following line at the botoom of file "local.properties":
+```
+ndk.dir={NDK_LOCATION}
+```
+Make sure to substitute {NDK_LOCATION} with the correct path to the NDK directory.
+Then, in Android Studio, go to Build > Rebuild Project and wait for the project to finish building. After, Run the "App" module on your Android device.

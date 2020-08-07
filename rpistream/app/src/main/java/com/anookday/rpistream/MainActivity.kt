@@ -79,12 +79,13 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
         super.onDestroy()
     }
 
+    /**
+     * Run a given function in a locked thread.
+     */
     private fun runWithLock(call: () -> Unit) {
         lifecycleScope.launch {
             withContext(Dispatchers.Default) {
-                mutex.withLock {
-                    call()
-                }
+                mutex.withLock { call() }
             }
         }
     }
