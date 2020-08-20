@@ -2,6 +2,7 @@ package com.anookday.rpistream
 
 import android.hardware.usb.UsbDevice
 import android.os.Bundle
+import android.os.Handler
 import android.view.Surface
 import android.view.SurfaceHolder
 import android.view.SurfaceView
@@ -29,10 +30,11 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
     private var mutex = Mutex()
     private var isActive = false
     private var isPreview = false
+    private var isBackPressedOnce = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Timber.v("onCreate called")
+        Timber.v("RPISTREAM lifecycle: onCreate called")
 
         val binding : ActivityMainBinding = DataBindingUtil.setContentView(this, R.layout.activity_main)
         mUVCCameraView = binding.cameraPreview
@@ -45,7 +47,7 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
 
     override fun onStart() {
         super.onStart()
-        Timber.v("onStart called")
+        Timber.v("RPISTREAM lifecycle: onStart called")
         runWithLock {
             if (this::mUSBMonitor.isInitialized) {
                 mUSBMonitor.register()
@@ -55,7 +57,7 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
 
 
     override fun onStop() {
-        Timber.v("onStop called")
+        Timber.v("RPISTREAM lifecycle: onStop called")
         runWithLock {
             if (this::mUSBMonitor.isInitialized) {
                 mUSBMonitor.unregister()
@@ -65,18 +67,23 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
     }
 
     override fun onDestroy() {
-        Timber.v("onDestroy called")
-        runWithLock {
-            isPreview = false
-            isActive = false
-            if (this::mUVCCamera.isInitialized) {
-                mUVCCamera.destroy()
-            }
-            if (this::mUSBMonitor.isInitialized) {
-                mUSBMonitor.destroy()
-            }
-        }
+        Timber.v("RPISTREAM lifecycle: onDestroy called")
+        destroyCamera()
         super.onDestroy()
+    }
+
+    override fun onBackPressed() {
+        if (isBackPressedOnce) {
+            destroyCamera()
+            super.onBackPressed()
+            return
+        }
+
+        isBackPressedOnce = true
+        Toast.makeText(this,"Press back button again to exit", Toast.LENGTH_SHORT).show()
+        Handler().postDelayed({
+            isBackPressedOnce = false
+        }, 2000)
     }
 
     /**
@@ -86,6 +93,22 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
         lifecycleScope.launch {
             withContext(Dispatchers.Default) {
                 mutex.withLock { call() }
+            }
+        }
+    }
+
+    /**
+     * Destroy all camera resources. Called before attempting to destroy the application process.
+     */
+    private fun destroyCamera() {
+        runWithLock {
+            isPreview = false
+            isActive = false
+            if (this::mUVCCamera.isInitialized) {
+                mUVCCamera.destroy()
+            }
+            if (this::mUSBMonitor.isInitialized) {
+                mUSBMonitor.destroy()
             }
         }
     }
@@ -110,11 +133,11 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
             ctrlBlock: USBMonitor.UsbControlBlock?,
             createNew: Boolean
         ) {
-            Timber.v("Device connected")
+            Timber.v("RPISTREAM onDeviceConnectListener: Device connected")
             runWithLock {
                 mUVCCamera = UVCCamera()
                 mUVCCamera.open(ctrlBlock)
-                Timber.i("Supported size: ${mUVCCamera.supportedSize}")
+                Timber.i("RPISTREAM onDeviceConnectListener: Supported size: ${mUVCCamera.supportedSize}")
                 try {
                     mUVCCamera.setPreviewSize(UVCCamera.DEFAULT_PREVIEW_WIDTH, UVCCamera.DEFAULT_PREVIEW_HEIGHT, UVCCamera.FRAME_FORMAT_MJPEG)
                     mPreviewSurface = mUVCCameraView.holder.surface
@@ -123,7 +146,7 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
                     mUVCCamera.startPreview()
                     isPreview = true
                 } catch (e: IllegalArgumentException) {
-                    Timber.i("Incorrect preview configuration passed")
+                    Timber.i("RPISTREAM onDeviceConnectListener: Incorrect preview configuration passed")
                     mUVCCamera.destroy()
                     isActive = false
                     isPreview = false
@@ -136,26 +159,26 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
         }
 
         override fun onAttach(device: UsbDevice?) {
-            Timber.v("AWOOO Device attached")
+            Timber.v("RPISTREAM onDeviceConnectListener: Device attached")
             Toast.makeText(this@MainActivity, "USB device attached", Toast.LENGTH_SHORT).show()
         }
 
         override fun onDisconnect(device: UsbDevice?, ctrlBlock: USBMonitor.UsbControlBlock?) {
-            Timber.v("Device disconnected")
+            Timber.v("RPISTREAM onDeviceConnectListener: Device disconnected")
             runWithLock {
                 if (this@MainActivity::mUVCCamera.isInitialized) {
                     mUVCCamera.close()
                 }
-                if (this@MainActivity::mPreviewSurface.isInitialized) {
+                /* if (this@MainActivity::mPreviewSurface.isInitialized) {
                     mPreviewSurface.release()
-                }
+                } */
                 isActive = false
                 isPreview = false
             }
         }
 
         override fun onDettach(device: UsbDevice?) {
-            Timber.v("Device detached")
+            Timber.v("RPISTREAM onDeviceConnectListener: Device detached")
             Toast.makeText(this@MainActivity, "USB device detached", Toast.LENGTH_SHORT).show()
         }
 
@@ -163,12 +186,12 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
 
     private var mSurfaceViewCallback = object: SurfaceHolder.Callback {
         override fun surfaceCreated(holder: SurfaceHolder) {
-            Timber.v("Surface created")
+            Timber.v("RPISTREAM surfaceViewCallback: Surface created")
         }
 
         override fun surfaceChanged(holder: SurfaceHolder?, format: Int, width: Int, height: Int) {
             if (width == 0 || height == 0) return
-            Timber.v("Surface changed")
+            Timber.v("RPISTREAM surfaceViewCallback: Surface changed")
             mPreviewSurface = holder!!.surface
             runWithLock {
                 if (isActive && !isPreview && this@MainActivity::mUVCCamera.isInitialized) {
@@ -180,7 +203,7 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
         }
 
         override fun surfaceDestroyed(holder: SurfaceHolder?) {
-            Timber.v("Surface destroyed")
+            Timber.v("RPISTREAM surfaceViewCallback: Surface destroyed")
             runWithLock {
                 mUVCCamera.stopPreview()
                 isPreview = false
@@ -191,6 +214,6 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
     override fun getUSBMonitor(): USBMonitor = mUSBMonitor
 
     override fun onDialogResult(canceled: Boolean) {
-        Timber.v("Dialog result: ${canceled.toString()}")
+        Timber.v("RPISTREAM dialog result: ${canceled.toString()}")
     }
 }
