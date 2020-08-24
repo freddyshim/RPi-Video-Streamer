@@ -51,13 +51,15 @@ dependencies {
     // Navigation
     implementation "androidx.navigation:navigation-fragment-ktx:$version_navigation"
     implementation "androidx.navigation:navigation-ui-ktx:$version_navigation"
-    // Timber: Logging utility
+    // Timber: Logging library
     implementation "com.jakewharton.timber:timber:$version_timber"
-    // Room: local database utility
+    // Room: local database library
     implementation "androidx.room:room-runtime:$version_room"
     kapt "androidx.room:room-compiler:$version_room"
     implementation "androidx.room:room-ktx:$version_room"
-    // LibUVCCamera: USB Camera utility
+    // LibUVCCamera: USB Camera library
     implementation "com.serenegiant:common:${commonLibVersion}"
     implementation project(":libuvccamera")
+    // rtmp-rtsp-stream-client-java: RTMP & RTSP streaming library
+    implementation "com.github.pedroSG94.rtmp-rtsp-stream-client-java:rtplibrary:$version_rtmp"
 }

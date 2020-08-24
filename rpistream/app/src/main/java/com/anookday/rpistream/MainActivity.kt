@@ -12,6 +12,10 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.lifecycleScope
 import com.anookday.rpistream.databinding.ActivityMainBinding
+import com.anookday.rpistream.streamlib.RtmpUSB
+import com.pedro.rtplibrary.rtmp.RtmpCamera1
+import com.pedro.rtplibrary.rtmp.RtmpCamera2
+import com.pedro.rtplibrary.view.OpenGlView
 import com.serenegiant.usb.CameraDialog
 import com.serenegiant.usb.USBMonitor
 import com.serenegiant.usb.UVCCamera
@@ -20,15 +24,25 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import net.ossrs.rtmp.ConnectCheckerRtmp
 import timber.log.Timber
 
-class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
+class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent, ConnectCheckerRtmp {
+    // data binding object
+    private lateinit var binding: ActivityMainBinding
+    // LibUVCCamera objects
     private lateinit var mUVCCamera: UVCCamera
     private lateinit var mPreviewSurface: Surface
     private lateinit var mUSBMonitor: USBMonitor
-    private lateinit var mUVCCameraView: SurfaceView
+    private lateinit var mUVCCameraView: OpenGlView
+    // RTMP objects
+    private lateinit var rtmpUSB: RtmpUSB
+    private val width = 1920
+    private val height = 1080
+    // Lock for synchronization
     private var mutex = Mutex()
-    private var isActive = false
+    // Booleans
+    private var isStreaming = false
     private var isPreview = false
     private var isBackPressedOnce = false
 
@@ -36,14 +50,17 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
         super.onCreate(savedInstanceState)
         Timber.v("RPISTREAM lifecycle: onCreate called")
 
-        val binding : ActivityMainBinding = DataBindingUtil.setContentView(this, R.layout.activity_main)
+        binding = DataBindingUtil.setContentView(this, R.layout.activity_main)
         mUVCCameraView = binding.cameraPreview
 
-        binding.cameraConnectButton.setOnClickListener(mOnClickListener)
+        binding.cameraConnectButton.setOnClickListener(mUVCCameraOnClickListener)
+        binding.streamToggleButton.setOnClickListener(mStreamOnClickListener)
         binding.cameraPreview.holder.addCallback(mSurfaceViewCallback)
 
         mUSBMonitor = USBMonitor(this, mOnDeviceConnectListener)
-    }
+
+        rtmpUSB = RtmpUSB(mUVCCameraView, this)
+  }
 
     override fun onStart() {
         super.onStart()
@@ -103,7 +120,9 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
     private fun destroyCamera() {
         runWithLock {
             isPreview = false
-            isActive = false
+            isStreaming = false
+            if (rtmpUSB.isStreaming) rtmpUSB.stopStream(mUVCCamera)
+            if (rtmpUSB.isOnPreview) rtmpUSB.stopPreview(mUVCCamera)
             if (this::mUVCCamera.isInitialized) {
                 mUVCCamera.destroy()
             }
@@ -113,20 +132,41 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
         }
     }
 
-    private var mOnClickListener = View.OnClickListener { view ->
-        if (!isActive && !isPreview) {
+    /**
+     * UVCCamera onClickListener object
+     */
+    private var mUVCCameraOnClickListener = View.OnClickListener { view ->
+        if (!isStreaming && !isPreview) {
             CameraDialog.showDialog(this)
         } else {
             runWithLock {
+                if (rtmpUSB.isStreaming) rtmpUSB.stopStream(mUVCCamera)
+                if (rtmpUSB.isOnPreview) rtmpUSB.stopPreview(mUVCCamera)
                 if (this::mUVCCamera.isInitialized) {
                     mUVCCamera.destroy()
                 }
-                isActive = false
+                isStreaming = false
                 isPreview = false
             }
         }
     }
 
+    private var mStreamOnClickListener = View.OnClickListener { view ->
+        if (!rtmpUSB.isStreaming) {
+            if (rtmpUSB.prepareVideo(width, height, 30, 4000 * 1024, false, 0,
+                    mUVCCamera) && rtmpUSB.prepareAudio()) {
+                rtmpUSB.startStream(mUVCCamera, binding.streamUriTextbox.text.toString())
+            }
+            binding.streamToggleButton.setImageResource(R.drawable.btn_shutter_video_recording)
+        } else {
+            binding.streamToggleButton.setImageResource(R.drawable.btn_repeat_shutter_recording)
+            rtmpUSB.stopStream(mUVCCamera)
+        }
+    }
+
+    /**
+     * deviceConnectListener object
+     */
     private var mOnDeviceConnectListener = object: USBMonitor.OnDeviceConnectListener {
         override fun onConnect(
             device: UsbDevice?,
@@ -139,16 +179,12 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
                 mUVCCamera.open(ctrlBlock)
                 Timber.i("RPISTREAM onDeviceConnectListener: Supported size: ${mUVCCamera.supportedSize}")
                 try {
-                    mUVCCamera.setPreviewSize(UVCCamera.DEFAULT_PREVIEW_WIDTH, UVCCamera.DEFAULT_PREVIEW_HEIGHT, UVCCamera.FRAME_FORMAT_MJPEG)
-                    mPreviewSurface = mUVCCameraView.holder.surface
-                    isActive = true
-                    mUVCCamera.setPreviewDisplay(mPreviewSurface)
-                    mUVCCamera.startPreview()
+                    mUVCCamera.setPreviewSize(width, height, UVCCamera.FRAME_FORMAT_MJPEG)
+                    rtmpUSB.startPreview(mUVCCamera, width, height)
                     isPreview = true
                 } catch (e: IllegalArgumentException) {
                     Timber.i("RPISTREAM onDeviceConnectListener: Incorrect preview configuration passed")
                     mUVCCamera.destroy()
-                    isActive = false
                     isPreview = false
                 }
             }
@@ -169,10 +205,7 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
                 if (this@MainActivity::mUVCCamera.isInitialized) {
                     mUVCCamera.close()
                 }
-                /* if (this@MainActivity::mPreviewSurface.isInitialized) {
-                    mPreviewSurface.release()
-                } */
-                isActive = false
+                isStreaming = false
                 isPreview = false
             }
         }
@@ -184,6 +217,9 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
 
     }
 
+    /**
+     * SurfaceView callback object
+     */
     private var mSurfaceViewCallback = object: SurfaceHolder.Callback {
         override fun surfaceCreated(holder: SurfaceHolder) {
             Timber.v("RPISTREAM surfaceViewCallback: Surface created")
@@ -194,9 +230,8 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
             Timber.v("RPISTREAM surfaceViewCallback: Surface changed")
             mPreviewSurface = holder!!.surface
             runWithLock {
-                if (isActive && !isPreview && this@MainActivity::mUVCCamera.isInitialized) {
-                    mUVCCamera.setPreviewDisplay(mPreviewSurface)
-                    mUVCCamera.startPreview()
+                if (!isPreview && this@MainActivity::mUVCCamera.isInitialized) {
+                    rtmpUSB.startPreview(mUVCCamera, width, height)
                     isPreview = true
                 }
             }
@@ -204,16 +239,45 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
 
         override fun surfaceDestroyed(holder: SurfaceHolder?) {
             Timber.v("RPISTREAM surfaceViewCallback: Surface destroyed")
-            runWithLock {
-                mUVCCamera.stopPreview()
-                isPreview = false
-            }
         }
     }
 
+    /**
+     * CameraDialogParent abstract methods
+     */
     override fun getUSBMonitor(): USBMonitor = mUSBMonitor
 
     override fun onDialogResult(canceled: Boolean) {
         Timber.v("RPISTREAM dialog result: ${canceled.toString()}")
+    }
+
+    /**
+     * ConnectCheckerRtmp abstract methods
+     */
+    override fun onConnectionSuccessRtmp() {
+        runOnUiThread { Toast.makeText(this, "Connection success", Toast.LENGTH_SHORT).show() }
+    }
+
+    override fun onConnectionFailedRtmp(reason: String) {
+        runOnUiThread {
+            Toast.makeText(this, "Connection failed. " + reason, Toast.LENGTH_SHORT).show()
+            rtmpUSB.stopStream(mUVCCamera)
+        }
+    }
+
+    override fun onAuthSuccessRtmp() {
+        runOnUiThread { Toast.makeText(this, "Auth success", Toast.LENGTH_SHORT).show() }
+    }
+
+    override fun onNewBitrateRtmp(bitrate: Long) {
+
+    }
+
+    override fun onAuthErrorRtmp() {
+        runOnUiThread { Toast.makeText(this, "Auth error", Toast.LENGTH_SHORT).show() }
+    }
+
+    override fun onDisconnectRtmp() {
+        runOnUiThread { Toast.makeText(this, "Disconnected", Toast.LENGTH_SHORT).show() }
     }
 }
