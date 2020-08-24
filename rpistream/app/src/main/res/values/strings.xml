@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Raspberry Pi Video Streamer</string>
+    <string name="stream_uri_hint">rtmp://yourEndpoint</string>
 </resources>

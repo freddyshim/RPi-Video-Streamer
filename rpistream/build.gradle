@@ -19,6 +19,8 @@ buildscript {
         versionNameString = '1.0.0'
         javaSourceCompatibility = JavaVersion.VERSION_1_8
         javaTargetCompatibility = JavaVersion.VERSION_1_8
+        // RTMP library version
+        version_rtmp = '1.8.7'
     }
     repositories {
         google()
@@ -28,7 +30,6 @@ buildscript {
         classpath "com.android.tools.build:gradle:4.0.1"
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$version_kotlin"
         classpath "androidx.navigation:navigation-safe-args-gradle-plugin:$version_navigation"
-
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
     }
@@ -37,6 +38,7 @@ buildscript {
 allprojects {
     repositories {
         maven { url 'http://raw.github.com/saki4510t/libcommon/master/repository/' }
+        maven { url 'https://jitpack.io' }
         google()
         jcenter()
     }
