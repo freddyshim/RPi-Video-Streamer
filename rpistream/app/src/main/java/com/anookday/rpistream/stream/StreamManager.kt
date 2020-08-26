@@ -1,0 +1,231 @@
+package com.anookday.rpistream.stream
+
+import android.content.Context
+import android.media.MediaCodec
+import android.media.MediaFormat
+import com.pedro.encoder.Frame
+import com.pedro.encoder.audio.AudioEncoder
+import com.pedro.encoder.audio.GetAacData
+import com.pedro.encoder.input.audio.GetMicrophoneData
+import com.pedro.encoder.input.audio.MicrophoneManager
+import com.pedro.encoder.video.FormatVideoEncoder
+import com.pedro.encoder.video.GetVideoData
+import com.pedro.encoder.video.VideoEncoder
+import com.pedro.rtplibrary.view.GlInterface
+import com.pedro.rtplibrary.view.OffScreenGlThread
+import com.pedro.rtplibrary.view.OpenGlView
+import com.serenegiant.usb.UVCCamera
+import timber.log.Timber
+import java.nio.ByteBuffer
+
+/**
+ * Wrapper class to stream video output from OpenGlView (custom implementation of SurfaceView that
+ * incorporates OpenGL) and audio output from an audio input source to a designated web server.
+ *
+ * This class is based on that of pedroSG94's "USBBase", which can be found at the following github repository:
+ * https://github.com/pedroSG94/Stream-USB-test/
+ */
+abstract class StreamManager(openGlView: OpenGlView) {
+    private val context: Context = openGlView.context
+    private var glInterface: GlInterface = openGlView
+    var isStreaming = false
+    var isPreview = false
+    private var videoFormat: MediaFormat? = null
+    private var audioFormat: MediaFormat? = null
+
+    protected abstract fun onSpsPpsVpsRtp(sps: ByteBuffer, pps: ByteBuffer, vps: ByteBuffer?)
+    protected abstract fun prepareAudioRtp(isStereo: Boolean, sampleRate: Int)
+    protected abstract fun getH264DataRtp(h264Buffer: ByteBuffer, info: MediaCodec.BufferInfo)
+    protected abstract fun getAacDataRtp(aacBuffer: ByteBuffer, info: MediaCodec.BufferInfo)
+    protected abstract fun startStreamRtp(url: String)
+    protected abstract fun stopStreamRtp()
+
+    init {
+        glInterface.init()
+    }
+
+    /**
+     * Video encoder class
+     */
+    protected val videoEncoder: VideoEncoder = VideoEncoder(object: GetVideoData {
+        override fun onVideoFormat(mediaFormat: MediaFormat) {
+            videoFormat = mediaFormat
+        }
+
+        override fun onSpsPpsVps(sps: ByteBuffer, pps: ByteBuffer, vps: ByteBuffer) {
+            if (isStreaming) {
+                onSpsPpsVpsRtp(sps, pps, vps)
+            }
+        }
+
+        override fun onSpsPps(sps: ByteBuffer, pps: ByteBuffer) {
+            if (isStreaming) {
+                onSpsPpsVpsRtp(sps, pps, null)
+            }
+        }
+
+        override fun getVideoData(h264Buffer: ByteBuffer, info: MediaCodec.BufferInfo) {
+            if (isStreaming) {
+                getH264DataRtp(h264Buffer, info)
+            }
+        }
+    })
+
+    /**
+     * Audio encoder class
+     */
+    private val audioEncoder: AudioEncoder = AudioEncoder(object: GetAacData {
+        override fun onAudioFormat(mediaFormat: MediaFormat?) {
+            audioFormat = mediaFormat
+        }
+
+        override fun getAacData(aacBuffer: ByteBuffer, info: MediaCodec.BufferInfo) {
+            if (isStreaming) {
+                getAacDataRtp(aacBuffer, info)
+            }
+        }
+    })
+
+    /**
+     * Microphone manager class
+     */
+    private val microphoneManager: MicrophoneManager = MicrophoneManager(object: GetMicrophoneData {
+        override fun inputPCMData(frame: Frame?) {
+            audioEncoder.inputPCMData(frame)
+        }
+    })
+
+    /**
+     * Prepare to stream video. Return true iff system is able and ready to stream video output.
+     *
+     * @param width             Width resolution in px.
+     * @param height            Height resolution in px.
+     * @param fps               Frames per second of the stream.
+     * @param bitrate           H264 in kb.
+     * @param hardwareRotation  If true then rotate using the encoder, else rotate with OpenGL.
+     * @param rotation          Degree of rotation (eg. 0, 90, 180, or 270).
+     *
+     * @return true if success, otherwise false.
+     */
+    fun prepareVideo(width: Int, height: Int, fps: Int, bitrate: Int, hardwareRotation: Boolean, iFrameInterval: Int, rotation: Int, uvcCamera: UVCCamera): Boolean {
+        if (isPreview) {
+            stopPreview(uvcCamera)
+            isPreview = true
+        }
+        return videoEncoder.prepareVideoEncoder(width, height, fps, bitrate, rotation, hardwareRotation, iFrameInterval, FormatVideoEncoder.SURFACE)
+    }
+
+    /**
+     * Prepare to stream audio. Return true iff system is able and ready to stream audio output.
+     *
+     * @param bitrate           AAC in kb.
+     * @param sampleRate        Sample rate of audio in hz (eg. 8000, 16000, 22500, 32000, 44100).
+     * @param isStereo          If true then enable stereo audio. Else, use mono aduio.
+     * @param echoCanceler      If true then enable echo canceler.
+     * @param noiseSuppressor   If true then enable noise suppressor.
+     *
+     * @return true if success, otherwise false.
+     */
+    fun prepareAudio(bitrate: Int, sampleRate: Int, isStereo: Boolean, echoCanceler: Boolean, noiseSuppressor: Boolean): Boolean {
+        microphoneManager.createMicrophone(sampleRate, isStereo, echoCanceler, noiseSuppressor)
+        prepareAudioRtp(isStereo, sampleRate)
+        return audioEncoder.prepareAudioEncoder(bitrate, sampleRate, isStereo, microphoneManager.maxInputSize)
+    }
+
+    /**
+     * Start camera preview if preview is currently disabled.
+     *
+     * @param uvcCamera     UVC Camera module.
+     * @param width         Width of preview frame in px.
+     * @param height        Height of preview frame in px.
+     */
+    fun startPreview(uvcCamera: UVCCamera, width: Int, height: Int) {
+        if (!isStreaming && !isPreview && glInterface !is OffScreenGlThread) {
+            Timber.v("RPISTREAM preview enabled")
+            glInterface.setEncoderSize(width, height)
+            glInterface.setRotation(0)
+            glInterface.start()
+            uvcCamera.setPreviewTexture(glInterface.surfaceTexture)
+            uvcCamera.startPreview()
+            isPreview = true
+        }
+    }
+
+    /**
+     * Stop camera preview if preview is currently enabled.
+     *
+     * @param uvcCamera UVC Camera module.
+     */
+    fun stopPreview(uvcCamera: UVCCamera) {
+        if (!isStreaming && isPreview && glInterface !is OffScreenGlThread) {
+            Timber.v("RPISTREAM preview disabled")
+            glInterface.stop()
+            uvcCamera.stopPreview()
+            isPreview = false
+        }
+    }
+
+    /**
+     * Start streaming to given url.
+     *
+     * @param uvcCamera UVC Camera module.
+     * @param url URL of the stream's designated location (eg. rtmp://live.twitch.tv/app/{stream_key})
+     */
+    fun startStream(uvcCamera: UVCCamera, url: String) {
+        isStreaming = true
+        startEncoders(uvcCamera)
+        startStreamRtp(url)
+    }
+
+    private fun startEncoders(uvcCamera: UVCCamera) {
+        videoEncoder.start()
+        audioEncoder.start()
+//        microphoneManager.start()
+        glInterface.stop()
+        glInterface.setEncoderSize(videoEncoder.width, videoEncoder.height)
+        glInterface.setRotation(0)
+        glInterface.start()
+        uvcCamera.setPreviewTexture(glInterface.surfaceTexture)
+        uvcCamera.startPreview()
+        if (videoEncoder.inputSurface != null) {
+            glInterface.addMediaCodecSurface(videoEncoder.inputSurface)
+        }
+        isPreview = true
+    }
+
+    private fun resetVideoEncoder() {
+        glInterface.removeMediaCodecSurface()
+        videoEncoder.reset()
+        glInterface.addMediaCodecSurface(videoEncoder.inputSurface)
+    }
+
+    private fun prepareGlView() {
+        if (glInterface is OffScreenGlThread) {
+            glInterface = OffScreenGlThread(context)
+            glInterface.setFps(videoEncoder.fps)
+        }
+        glInterface.init()
+        if (videoEncoder.rotation == 90 || videoEncoder.rotation == 270) {
+            glInterface.setEncoderSize(videoEncoder.height, videoEncoder.width)
+        } else {
+            glInterface.setEncoderSize(videoEncoder.width, videoEncoder.height)
+        }
+        glInterface.start()
+        glInterface.addMediaCodecSurface(videoEncoder.inputSurface)
+    }
+
+    fun stopStream(uvcCamera: UVCCamera) {
+        if (isStreaming) {
+            isStreaming = false
+            stopStreamRtp()
+        }
+        glInterface.removeMediaCodecSurface()
+        if (glInterface is OffScreenGlThread) {
+            glInterface.stop()
+            uvcCamera.stopPreview()
+        }
+        videoEncoder.stop()
+        audioEncoder.stop()
+
+    }
+}
