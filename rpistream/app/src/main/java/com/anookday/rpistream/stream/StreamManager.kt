@@ -3,6 +3,8 @@ package com.anookday.rpistream.stream
 import android.content.Context
 import android.media.MediaCodec
 import android.media.MediaFormat
+import com.anookday.rpistream.config.AudioConfig
+import com.anookday.rpistream.config.VideoConfig
 import com.pedro.encoder.Frame
 import com.pedro.encoder.audio.AudioEncoder
 import com.pedro.encoder.audio.GetAacData
@@ -98,38 +100,55 @@ abstract class StreamManager(openGlView: OpenGlView) {
     /**
      * Prepare to stream video. Return true iff system is able and ready to stream video output.
      *
-     * @param width             Width resolution in px.
-     * @param height            Height resolution in px.
-     * @param fps               Frames per second of the stream.
-     * @param bitrate           H264 in kb.
-     * @param hardwareRotation  If true then rotate using the encoder, else rotate with OpenGL.
-     * @param rotation          Degree of rotation (eg. 0, 90, 180, or 270).
+     * @param uvcCamera UVC camera module
+     * @param config Video configuration object
      *
      * @return true if success, otherwise false.
      */
-    fun prepareVideo(width: Int, height: Int, fps: Int, bitrate: Int, hardwareRotation: Boolean, iFrameInterval: Int, rotation: Int, uvcCamera: UVCCamera): Boolean {
+    fun prepareVideo(uvcCamera: UVCCamera, config: VideoConfig?): Boolean {
+        if (config == null) return false
+
         if (isPreview) {
             stopPreview(uvcCamera)
             isPreview = true
         }
-        return videoEncoder.prepareVideoEncoder(width, height, fps, bitrate, rotation, hardwareRotation, iFrameInterval, FormatVideoEncoder.SURFACE)
+
+        return videoEncoder.prepareVideoEncoder(
+            config.width,
+            config.height,
+            config.fps,
+            config.bitrate,
+            config.rotation,
+            config.hardwareRotation,
+            config.iFrameInterval,
+            FormatVideoEncoder.SURFACE
+        )
     }
 
     /**
      * Prepare to stream audio. Return true iff system is able and ready to stream audio output.
      *
-     * @param bitrate           AAC in kb.
-     * @param sampleRate        Sample rate of audio in hz (eg. 8000, 16000, 22500, 32000, 44100).
-     * @param isStereo          If true then enable stereo audio. Else, use mono aduio.
-     * @param echoCanceler      If true then enable echo canceler.
-     * @param noiseSuppressor   If true then enable noise suppressor.
+     * @param config Audio configuration object
      *
      * @return true if success, otherwise false.
      */
-    fun prepareAudio(bitrate: Int, sampleRate: Int, isStereo: Boolean, echoCanceler: Boolean, noiseSuppressor: Boolean): Boolean {
-        microphoneManager.createMicrophone(sampleRate, isStereo, echoCanceler, noiseSuppressor)
-        prepareAudioRtp(isStereo, sampleRate)
-        return audioEncoder.prepareAudioEncoder(bitrate, sampleRate, isStereo, microphoneManager.maxInputSize)
+    fun prepareAudio(config: AudioConfig?): Boolean {
+        if (config == null) return false
+
+        microphoneManager.createMicrophone(
+            config.sampleRate,
+            config.stereo,
+            config.echoCanceler,
+            config.noiseSuppressor
+        )
+
+        prepareAudioRtp(config.stereo, config.sampleRate)
+        return audioEncoder.prepareAudioEncoder(
+            config.bitrate,
+            config.sampleRate,
+            config.stereo,
+            microphoneManager.maxInputSize
+        )
     }
 
     /**
