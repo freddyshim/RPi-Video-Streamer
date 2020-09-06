@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/fab_container"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/video_fab"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        app:backgroundTint="@color/colorPrimary"
+        app:borderWidth="0dp"
+        app:fabSize="mini"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="@+id/menu_fab"
+        app:layout_constraintStart_toStartOf="@+id/menu_fab"
+        app:srcCompat="@drawable/ic_baseline_videocam_off_24"
+        app:tint="@color/colorIconText" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/audio_fab"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        app:backgroundTint="@color/colorPrimary"
+        app:borderWidth="0dp"
+        app:fabSize="mini"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="@+id/menu_fab"
+        app:layout_constraintStart_toStartOf="@+id/menu_fab"
+        app:srcCompat="@drawable/ic_baseline_mic_off_24"
+        app:tint="@color/colorIconText" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/stream_fab"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        app:backgroundTint="@color/colorPrimary"
+        app:borderWidth="0dp"
+        app:fabSize="mini"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="@+id/menu_fab"
+        app:layout_constraintStart_toStartOf="@+id/menu_fab"
+        app:srcCompat="@drawable/ic_baseline_live_tv_24"
+        app:tint="@color/colorIconText" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/menu_fab"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        app:backgroundTint="@color/colorAccent"
+        app:borderWidth="0dp"
+        app:fabSize="normal"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:srcCompat="@drawable/ic_baseline_menu_24"
+        app:tint="@color/colorIconText" />
+
+    <TextView
+        android:id="@+id/video_fab_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="8dp"
+        android:background="@drawable/fab_text_bg"
+        android:fontFamily="sans-serif"
+        android:paddingStart="8dp"
+        android:paddingTop="4dp"
+        android:paddingEnd="8dp"
+        android:paddingBottom="4dp"
+        android:text="@string/video_off_text"
+        android:textColor="@color/colorTextPrimary"
+        android:visibility="invisible"
+        app:layout_constraintBottom_toBottomOf="@+id/video_fab"
+        app:layout_constraintEnd_toStartOf="@+id/video_fab"
+        app:layout_constraintTop_toTopOf="@+id/video_fab" />
+
+    <TextView
+        android:id="@+id/audio_fab_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="8dp"
+        android:background="@drawable/fab_text_bg"
+        android:fontFamily="sans-serif"
+        android:paddingStart="8dp"
+        android:paddingTop="4dp"
+        android:paddingEnd="8dp"
+        android:paddingBottom="4dp"
+        android:text="@string/audio_off_text"
+        android:textColor="@color/colorTextPrimary"
+        android:visibility="invisible"
+        app:layout_constraintBottom_toBottomOf="@+id/audio_fab"
+        app:layout_constraintEnd_toStartOf="@+id/audio_fab"
+        app:layout_constraintTop_toTopOf="@+id/audio_fab" />
+
+    <TextView
+        android:id="@+id/stream_fab_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="8dp"
+        android:background="@drawable/fab_text_bg"
+        android:fontFamily="sans-serif"
+        android:paddingStart="8dp"
+        android:paddingTop="4dp"
+        android:paddingEnd="8dp"
+        android:paddingBottom="4dp"
+        android:text="@string/stream_off_text"
+        android:textColor="@color/colorTextPrimary"
+        android:visibility="invisible"
+        app:layout_constraintBottom_toBottomOf="@+id/stream_fab"
+        app:layout_constraintEnd_toStartOf="@+id/stream_fab"
+        app:layout_constraintTop_toTopOf="@+id/stream_fab" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

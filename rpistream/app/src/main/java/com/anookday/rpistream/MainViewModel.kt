@@ -20,75 +20,83 @@ import kotlinx.coroutines.launch
 import net.ossrs.rtmp.ConnectCheckerRtmp
 import timber.log.Timber
 
-enum class UsbConnectStatus {
-    ATTACHED, DETACHED
-}
+enum class UsbConnectStatus { ATTACHED, DETACHED }
+enum class RtmpConnectStatus { SUCCESS, FAIL, DISCONNECT }
+enum class RtmpAuthStatus { SUCCESS, FAIL }
 
-enum class RtmpConnectStatus {
-    SUCCESS, FAIL, DISCONNECT
-}
-
-enum class RtmpAuthStatus {
-    SUCCESS, FAIL
-}
-
+/**
+ * ViewModel for [MainActivity].
+ */
 class MainViewModel: ViewModel() {
-    private var viewModelJob = Job()
+    private val viewModelJob = Job()
     private val coroutineScope = CoroutineScope(viewModelJob + Dispatchers.Main)
 
+    // video configuration object
     private val _videoConfig = MutableLiveData<VideoConfig>()
     val videoConfig: LiveData<VideoConfig>
         get() = _videoConfig
 
+    // audio configuration object
     private val _audioConfig = MutableLiveData<AudioConfig>()
     val audioConfig: LiveData<AudioConfig>
         get() = _audioConfig
 
+    // USB monitor object used to control connected USB devices
     private val _usbMonitor = MutableLiveData<USBMonitor>()
     val usbMonitor: LiveData<USBMonitor>
         get() = _usbMonitor
 
+    // object used to manage stream activity
     private val _streamManager = MutableLiveData<StreamManager>()
     val streamManager: LiveData<StreamManager>
         get() = _streamManager
 
+    // UVC camera object
     private val _uvcCamera = MutableLiveData<UVCCamera>()
     val uvcCamera: LiveData<UVCCamera>
         get() = _uvcCamera
 
+    // URI address to which the stream output is sent
     private val _streamUri = MutableLiveData<String>()
     val streamUri: LiveData<String>
         get() = _streamUri
 
+    // USB device status
     private val _usbStatus = MutableLiveData<UsbConnectStatus>()
     val usbStatus: LiveData<UsbConnectStatus>
         get() = _usbStatus
 
+    // stream connection status
     private val _connectStatus = MutableLiveData<RtmpConnectStatus>()
     val connectStatus: LiveData<RtmpConnectStatus>
         get() = _connectStatus
 
+    // stream authentication status
     private val _authStatus = MutableLiveData<RtmpAuthStatus>()
     val authStatus: LiveData<RtmpAuthStatus>
         get() = _authStatus
 
+    // video connection status
+    private val _videoStatus = MutableLiveData<String>()
+    val videoStatus: LiveData<String>
+        get() = _videoStatus
+
+    // audio connection status
+    private val _audioStatus = MutableLiveData<String>()
+    val audioStatus: LiveData<String>
+        get() = _audioStatus
+
+    /**
+     * Initialize required LiveData variables.
+     *
+     * @param context Activity context
+     * @param cameraView OpenGL surface view that displays the camera
+     */
     fun init(context: Context, cameraView: OpenGlView) {
         _videoConfig.value = VideoConfig()
         _audioConfig.value = AudioConfig()
         _usbMonitor.value = USBMonitor(context, onDeviceConnectListener)
         _streamManager.value = RtmpStreamManager(cameraView, connectCheckerRtmp)
-    }
-
-    fun resetUsbStatus() {
-        _usbStatus.value = null
-    }
-
-    fun resetConnectStatus() {
-        _connectStatus.value = null
-    }
-
-    fun resetAuthStatus() {
-        _authStatus.value = null
     }
 
     fun registerUsbMonitor() {
@@ -107,6 +115,9 @@ class MainViewModel: ViewModel() {
         _streamUri.value = uri
     }
 
+    /**
+     * Start camera preview if there is no preview.
+     */
     fun startPreview(width: Int, height: Int) {
         coroutineScope.launch {
             _uvcCamera.value?.let { camera ->
@@ -117,6 +128,9 @@ class MainViewModel: ViewModel() {
         }
     }
 
+    /**
+     * Stop the current stream and preview. Destroy camera instance if initialized.
+     */
     fun destroyCamera() {
         coroutineScope.launch {
             _uvcCamera.value?.let { camera ->
@@ -133,16 +147,19 @@ class MainViewModel: ViewModel() {
         _usbMonitor.value?.destroy()
     }
 
+    /**
+     * Start streaming to registered URI address if not currently streaming.
+     * Otherwise, stop the current stream.
+     */
     fun toggleStream() {
         _uvcCamera.value?.let {camera ->
             _streamManager.value?.let { stream ->
                 if (!stream.isStreaming) {
                     if (stream.prepareVideo(camera, _videoConfig.value) && stream.prepareAudio(_audioConfig.value)) {
                         if (_streamUri.value != null) {
-                            Timber.i("Stream address: ${_streamUri.value!!}")
                             stream.startStream(camera, _streamUri.value!!)
                         } else {
-                            //TODO()
+                            stream.startStream(camera, "")
                         }
                     }
                 } else {
@@ -171,10 +188,12 @@ class MainViewModel: ViewModel() {
                         videoConfig.value?.let { config ->
                             camera.setPreviewSize(config.width, config.height, UVCCamera.FRAME_FORMAT_MJPEG)
                             streamManager.value?.startPreview(camera, config.width, config.height)
+                            _videoStatus.value = camera.deviceName
                         }
                     } catch (e: IllegalArgumentException) {
                         Timber.i("RPISTREAM onDeviceConnectListener: Incorrect preview configuration passed")
                         camera.destroy()
+                        _videoStatus.value = null
                     }
                 }
             }
@@ -193,6 +212,7 @@ class MainViewModel: ViewModel() {
             Timber.v("RPISTREAM onDeviceConnectListener: Device disconnected")
             coroutineScope.launch {
                 uvcCamera.value?.close()
+                _videoStatus.value = null
             }
         }
 
@@ -203,13 +223,16 @@ class MainViewModel: ViewModel() {
 
     }
 
+    /**
+     * RTMP connection notification object
+     */
     private var connectCheckerRtmp = object: ConnectCheckerRtmp {
         override fun onConnectionSuccessRtmp() {
             _connectStatus.postValue(RtmpConnectStatus.SUCCESS)
         }
 
         override fun onConnectionFailedRtmp(reason: String) {
-            _connectStatus.postValue(RtmpConnectStatus.DISCONNECT)
+            _connectStatus.postValue(RtmpConnectStatus.FAIL)
             uvcCamera.value?.let {
                 streamManager.value?.stopStream(it)
             }
