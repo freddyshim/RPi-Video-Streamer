@@ -1,24 +1,43 @@
 package com.anookday.rpistream
 
+import android.animation.Animator
+import android.animation.AnimatorInflater
+import android.animation.AnimatorSet
+import android.animation.ObjectAnimator
+import android.content.Context
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.os.Handler
 import android.text.Editable
 import android.text.TextWatcher
+import android.transition.ChangeBounds
+import android.transition.TransitionManager
 import android.view.SurfaceHolder
 import android.view.View
+import android.view.animation.Animation
+import android.view.animation.AnimationUtils
+import android.view.animation.AnticipateOvershootInterpolator
+import android.view.animation.OvershootInterpolator
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.widget.addTextChangedListener
+import androidx.constraintlayout.widget.ConstraintSet
+import androidx.core.content.ContextCompat
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.anookday.rpistream.databinding.ActivityMainBinding
 import com.serenegiant.usb.CameraDialog
 import com.serenegiant.usb.USBMonitor
+import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.android.synthetic.main.fab_toggle_on.*
 import timber.log.Timber
 
+/**
+ * Stream (main) activity class.
+ */
 class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
     private var isBackPressedOnce = false
+    private var isMenuPressed = true
 
     private val viewModel: MainViewModel by lazy {
         ViewModelProvider(this).get(MainViewModel::class.java)
@@ -35,8 +54,24 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
         binding.lifecycleOwner = this
         binding.viewModel = viewModel
 
-        binding.cameraConnectButton.setOnClickListener(uvcCameraOnClickListener)
-        binding.streamToggleButton.setOnClickListener(streamOnClickListener)
+        val fabConstraintOn = ConstraintSet()
+        fabConstraintOn.clone(this, R.layout.fab_toggle_on)
+        val fabConstraintOff = ConstraintSet()
+        fabConstraintOff.clone(this, R.layout.fab_toggle_off)
+        val transition = ChangeBounds()
+        transition.interpolator = OvershootInterpolator(1.0f)
+
+        video_fab.setOnClickListener(uvcCameraOnClickListener)
+        stream_fab.setOnClickListener(streamOnClickListener)
+        menu_fab.setOnClickListener {
+            TransitionManager.beginDelayedTransition(fab_container, transition)
+            if (isMenuPressed) {
+                fabConstraintOn.applyTo(fab_container)
+            } else {
+                fabConstraintOff.applyTo(fab_container)
+            }
+            isMenuPressed = !isMenuPressed
+        }
         binding.cameraPreview.holder.addCallback(surfaceViewCallback)
         binding.streamUriTextbox.addTextChangedListener(onUriChangeListener)
 
@@ -74,10 +109,19 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
         }
 
         isBackPressedOnce = true
-        Toast.makeText(this,"Press back button again to exit", Toast.LENGTH_SHORT).show()
+        showMessage("Press back button again to exit")
         Handler().postDelayed({
             isBackPressedOnce = false
         }, 2000)
+    }
+
+    /**
+     * Displays given message in a toast.
+     *
+     * @param msg Text to display
+     */
+    private fun showMessage(msg: String) {
+        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
     }
 
     /**
@@ -153,31 +197,56 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
         viewModel.usbStatus.observe(this, Observer { status ->
             status?.let {
                 when(it) {
-                    UsbConnectStatus.ATTACHED -> Toast.makeText(this, "USB device attached", Toast.LENGTH_SHORT).show()
-                    UsbConnectStatus.DETACHED -> Toast.makeText(this, "USB device detached", Toast.LENGTH_SHORT).show()
+                    UsbConnectStatus.ATTACHED -> showMessage("USB device attached")
+                    UsbConnectStatus.DETACHED -> showMessage("USB device detached")
                 }
-                viewModel.resetUsbStatus()
             }
         })
 
         viewModel.connectStatus.observe(this, Observer { status ->
             status?.let {
                 when(it) {
-                    RtmpConnectStatus.SUCCESS -> Toast.makeText(this, "Connection success", Toast.LENGTH_SHORT).show()
-                    RtmpConnectStatus.FAIL -> Toast.makeText(this, "Connection failed", Toast.LENGTH_SHORT).show()
-                    RtmpConnectStatus.DISCONNECT -> Toast.makeText(this, "Disconnected", Toast.LENGTH_SHORT).show()
+                    RtmpConnectStatus.SUCCESS -> {
+                        stream_fab_text.text = getText(R.string.stream_on_text)
+                        stream_fab.backgroundTintList = ColorStateList.valueOf(
+                            ContextCompat.getColor(this@MainActivity, R.color.colorAccent)
+                        )
+                        showMessage("Connection success")
+                    }
+                    RtmpConnectStatus.FAIL -> showMessage("Connection failed")
+                    RtmpConnectStatus.DISCONNECT -> {
+                        stream_fab_text.text = getText(R.string.stream_off_text)
+                        stream_fab.backgroundTintList = ColorStateList.valueOf(
+                            ContextCompat.getColor(this@MainActivity, R.color.colorPrimary)
+                        )
+                        showMessage("Disconnected")
+                    }
                 }
-                viewModel.resetConnectStatus()
             }
         })
 
         viewModel.authStatus.observe(this, Observer { status ->
             status?.let {
                 when(it) {
-                    RtmpAuthStatus.SUCCESS -> Toast.makeText(this, "Auth success", Toast.LENGTH_SHORT).show()
-                    RtmpAuthStatus.FAIL -> Toast.makeText(this, "Auth error", Toast.LENGTH_SHORT).show()
+                    RtmpAuthStatus.SUCCESS -> showMessage("Auth success")
+                    RtmpAuthStatus.FAIL -> showMessage("Auth error")
                 }
-                viewModel.resetAuthStatus()
+            }
+        })
+
+        viewModel.videoStatus.observe(this, Observer { status ->
+            if (status != null) {
+                video_fab.setImageResource(R.drawable.ic_baseline_videocam_24)
+                video_fab.backgroundTintList = ColorStateList.valueOf(
+                    ContextCompat.getColor(this@MainActivity, R.color.colorAccent)
+                )
+                video_fab_text.text = status
+            } else {
+                video_fab.setImageResource(R.drawable.ic_baseline_videocam_off_24)
+                video_fab.backgroundTintList = ColorStateList.valueOf(
+                    ContextCompat.getColor(this@MainActivity, R.color.colorPrimary)
+                )
+                video_fab_text.text = getText(R.string.video_off_text)
             }
         })
     }
