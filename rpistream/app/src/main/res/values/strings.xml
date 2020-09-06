@@ -1,4 +1,8 @@
 <resources>
     <string name="app_name">Raspberry Pi Video Streamer</string>
     <string name="stream_uri_hint">rtmp://yourEndpoint</string>
+    <string name="video_off_text">Video not connected</string>
+    <string name="audio_off_text">Audio not connected</string>
+    <string name="stream_off_text">Stream: OFF</string>
+    <string name="stream_on_text">Stream: ON</string>
 </resources>
