@@ -49,7 +49,7 @@ abstract class StreamManager(openGlView: OpenGlView) {
     /**
      * Video encoder class
      */
-    protected val videoEncoder: VideoEncoder = VideoEncoder(object: GetVideoData {
+    protected val videoEncoder: VideoEncoder = VideoEncoder(object : GetVideoData {
         override fun onVideoFormat(mediaFormat: MediaFormat) {
             videoFormat = mediaFormat
         }
@@ -76,7 +76,7 @@ abstract class StreamManager(openGlView: OpenGlView) {
     /**
      * Audio encoder class
      */
-    private val audioEncoder: AudioEncoder = AudioEncoder(object: GetAacData {
+    private val audioEncoder: AudioEncoder = AudioEncoder(object : GetAacData {
         override fun onAudioFormat(mediaFormat: MediaFormat?) {
             audioFormat = mediaFormat
         }
@@ -91,11 +91,8 @@ abstract class StreamManager(openGlView: OpenGlView) {
     /**
      * Microphone manager class
      */
-    private val microphoneManager: MicrophoneManager = MicrophoneManager(object: GetMicrophoneData {
-        override fun inputPCMData(frame: Frame?) {
-            audioEncoder.inputPCMData(frame)
-        }
-    })
+    private val microphoneManager: MicrophoneManager =
+        MicrophoneManager { frame -> audioEncoder.inputPCMData(frame) }
 
     /**
      * Prepare to stream video. Return true iff system is able and ready to stream video output.

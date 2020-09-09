@@ -1,41 +1,51 @@
 package com.anookday.rpistream
 
-import android.animation.Animator
-import android.animation.AnimatorInflater
-import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
-import android.content.Context
+import android.app.PendingIntent
+import android.content.Intent
 import android.content.res.ColorStateList
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.text.Editable
 import android.text.TextWatcher
 import android.transition.ChangeBounds
 import android.transition.TransitionManager
+import android.view.MenuItem
 import android.view.SurfaceHolder
 import android.view.View
-import android.view.animation.Animation
-import android.view.animation.AnimationUtils
-import android.view.animation.AnticipateOvershootInterpolator
 import android.view.animation.OvershootInterpolator
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.Toolbar
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.content.ContextCompat
+import androidx.core.view.GravityCompat
 import androidx.databinding.DataBindingUtil
+import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.anookday.rpistream.databinding.ActivityMainBinding
+import com.anookday.rpistream.oauth.TwitchManager
+import com.google.android.material.navigation.NavigationView
 import com.serenegiant.usb.CameraDialog
 import com.serenegiant.usb.USBMonitor
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.fab_toggle_on.*
+import net.openid.appauth.AuthorizationRequest
+import net.openid.appauth.AuthorizationService
+import net.openid.appauth.AuthorizationServiceConfiguration
+import net.openid.appauth.ResponseTypeValues
 import timber.log.Timber
 
 /**
  * Stream (main) activity class.
  */
 class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
+    private lateinit var mFabConstraintOn : ConstraintSet
+    private lateinit var mFabConstraintOff : ConstraintSet
+    private lateinit var mTransition : ChangeBounds
+    private val twitchManager = TwitchManager(this)
     private var isBackPressedOnce = false
     private var isMenuPressed = true
 
@@ -50,35 +60,59 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
         super.onCreate(savedInstanceState)
         Timber.v("RPISTREAM lifecycle: onCreate called")
 
-        val binding: ActivityMainBinding = DataBindingUtil.setContentView(this, R.layout.activity_main)
+        // initialize data binding
+        val binding: ActivityMainBinding =
+            DataBindingUtil.setContentView(this, R.layout.activity_main)
         binding.lifecycleOwner = this
         binding.viewModel = viewModel
 
-        val fabConstraintOn = ConstraintSet()
-        fabConstraintOn.clone(this, R.layout.fab_toggle_on)
-        val fabConstraintOff = ConstraintSet()
-        fabConstraintOff.clone(this, R.layout.fab_toggle_off)
-        val transition = ChangeBounds()
-        transition.interpolator = OvershootInterpolator(1.0f)
+        // initialize toolbar and navigation drawer
+        setSupportActionBar(app_bar as Toolbar)
+        supportActionBar?.let {
+            it.setHomeAsUpIndicator(R.drawable.ic_baseline_account_circle_24)
+            it.setDisplayHomeAsUpEnabled(true)
+        }
+        acc_drawer.setNavigationItemSelectedListener {
+            when (it.itemId) {
+                R.id.action_login -> {
+                    twitchManager.authorize()
+                    app_container.closeDrawers()
+                    true
+                }
+                else -> false
+            }
+        }
 
+        // initialize activity (layout) variables
+        mFabConstraintOn = ConstraintSet()
+        mFabConstraintOn.clone(this, R.layout.fab_toggle_on)
+        mFabConstraintOff = ConstraintSet()
+        mFabConstraintOff.clone(this, R.layout.fab_toggle_off)
+        mTransition = ChangeBounds()
+        mTransition.interpolator = OvershootInterpolator(1.0f)
+
+        // set click listeners
         video_fab.setOnClickListener(uvcCameraOnClickListener)
         stream_fab.setOnClickListener(streamOnClickListener)
-        menu_fab.setOnClickListener {
-            TransitionManager.beginDelayedTransition(fab_container, transition)
-            if (isMenuPressed) {
-                fabConstraintOn.applyTo(fab_container)
-            } else {
-                fabConstraintOff.applyTo(fab_container)
-            }
-            isMenuPressed = !isMenuPressed
-        }
+        menu_fab.setOnClickListener(menuFabOnClickListener)
+
+        // set event callbacks
         binding.cameraPreview.holder.addCallback(surfaceViewCallback)
         binding.streamUriTextbox.addTextChangedListener(onUriChangeListener)
 
+        // set observers
         setObservers()
 
+        // initialize ViewModel objects
         viewModel.init(this, binding.cameraPreview)
-  }
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
+            android.R.id.home -> app_container.openDrawer(GravityCompat.START)
+        }
+        return true
+    }
 
     override fun onStart() {
         super.onStart()
@@ -145,9 +179,28 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
     }
 
     /**
+     * menu fab onClickListener object
+     */
+    private var menuFabOnClickListener = View.OnClickListener {
+        var alpha = 0F
+        TransitionManager.beginDelayedTransition(fab_container, mTransition)
+        if (isMenuPressed) {
+            alpha = 0.75F
+            mFabConstraintOn.applyTo(fab_container)
+        } else {
+            mFabConstraintOff.applyTo(fab_container)
+        }
+        ObjectAnimator.ofFloat(main_dimmed_bg, "alpha", alpha).apply {
+            duration = 300
+            start()
+        }
+        isMenuPressed = !isMenuPressed
+    }
+
+    /**
      * SurfaceView callback object
      */
-    private var surfaceViewCallback = object: SurfaceHolder.Callback {
+    private var surfaceViewCallback = object : SurfaceHolder.Callback {
         override fun surfaceCreated(holder: SurfaceHolder) {
             Timber.v("RPISTREAM surfaceViewCallback: Surface created")
         }
@@ -166,7 +219,7 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
     /**
      * StreamUriTextBox onChangeListener object
      */
-    private var onUriChangeListener = object: TextWatcher {
+    private var onUriChangeListener = object : TextWatcher {
         override fun afterTextChanged(s: Editable?) {
             //
         }
@@ -196,7 +249,7 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
     private fun setObservers() {
         viewModel.usbStatus.observe(this, Observer { status ->
             status?.let {
-                when(it) {
+                when (it) {
                     UsbConnectStatus.ATTACHED -> showMessage("USB device attached")
                     UsbConnectStatus.DETACHED -> showMessage("USB device detached")
                 }
@@ -205,7 +258,7 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
 
         viewModel.connectStatus.observe(this, Observer { status ->
             status?.let {
-                when(it) {
+                when (it) {
                     RtmpConnectStatus.SUCCESS -> {
                         stream_fab_text.text = getText(R.string.stream_on_text)
                         stream_fab.backgroundTintList = ColorStateList.valueOf(
@@ -227,7 +280,7 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
 
         viewModel.authStatus.observe(this, Observer { status ->
             status?.let {
-                when(it) {
+                when (it) {
                     RtmpAuthStatus.SUCCESS -> showMessage("Auth success")
                     RtmpAuthStatus.FAIL -> showMessage("Auth error")
                 }
