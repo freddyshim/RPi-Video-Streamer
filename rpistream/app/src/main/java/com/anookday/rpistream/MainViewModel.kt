@@ -27,7 +27,7 @@ enum class RtmpAuthStatus { SUCCESS, FAIL }
 /**
  * ViewModel for [MainActivity].
  */
-class MainViewModel: ViewModel() {
+class MainViewModel : ViewModel() {
     private val viewModelJob = Job()
     private val coroutineScope = CoroutineScope(viewModelJob + Dispatchers.Main)
 
@@ -152,10 +152,13 @@ class MainViewModel: ViewModel() {
      * Otherwise, stop the current stream.
      */
     fun toggleStream() {
-        _uvcCamera.value?.let {camera ->
+        _uvcCamera.value?.let { camera ->
             _streamManager.value?.let { stream ->
                 if (!stream.isStreaming) {
-                    if (stream.prepareVideo(camera, _videoConfig.value) && stream.prepareAudio(_audioConfig.value)) {
+                    if (stream.prepareVideo(camera, _videoConfig.value) && stream.prepareAudio(
+                            _audioConfig.value
+                        )
+                    ) {
                         if (_streamUri.value != null) {
                             stream.startStream(camera, _streamUri.value!!)
                         } else {
@@ -172,7 +175,7 @@ class MainViewModel: ViewModel() {
     /**
      * deviceConnectListener object
      */
-    private var onDeviceConnectListener = object: USBMonitor.OnDeviceConnectListener {
+    private var onDeviceConnectListener = object : USBMonitor.OnDeviceConnectListener {
         override fun onConnect(
             device: UsbDevice?,
             ctrlBlock: USBMonitor.UsbControlBlock?,
@@ -186,7 +189,11 @@ class MainViewModel: ViewModel() {
                     Timber.i("RPISTREAM onDeviceConnectListener: Supported size: ${uvcCamera.value?.supportedSize}")
                     try {
                         videoConfig.value?.let { config ->
-                            camera.setPreviewSize(config.width, config.height, UVCCamera.FRAME_FORMAT_MJPEG)
+                            camera.setPreviewSize(
+                                config.width,
+                                config.height,
+                                UVCCamera.FRAME_FORMAT_MJPEG
+                            )
                             streamManager.value?.startPreview(camera, config.width, config.height)
                             _videoStatus.value = camera.deviceName
                         }
@@ -226,7 +233,7 @@ class MainViewModel: ViewModel() {
     /**
      * RTMP connection notification object
      */
-    private var connectCheckerRtmp = object: ConnectCheckerRtmp {
+    private var connectCheckerRtmp = object : ConnectCheckerRtmp {
         override fun onConnectionSuccessRtmp() {
             _connectStatus.postValue(RtmpConnectStatus.SUCCESS)
         }
