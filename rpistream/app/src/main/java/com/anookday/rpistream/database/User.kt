@@ -7,9 +7,9 @@ import net.openid.appauth.AuthState
 @Entity
 data class User(
     @PrimaryKey val idToken: String,
-    val username: String,
     val authStateJson: String,
-    val accessToken: String,
-    val streamKey: String,
-    val profilePicture: 
+    val displayName: String,
+    val description: String,
+    val email: String,
+    val profileImage: String
 )
