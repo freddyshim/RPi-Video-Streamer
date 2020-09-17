@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.text.Editable
+import android.text.TextUtils
 import android.text.TextWatcher
 import android.transition.ChangeBounds
 import android.transition.TransitionManager
@@ -22,35 +23,33 @@ import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.content.ContextCompat
 import androidx.core.view.GravityCompat
 import androidx.databinding.DataBindingUtil
-import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import com.anookday.rpistream.databinding.ActivityMainBinding
-import com.anookday.rpistream.oauth.TwitchManager
-import com.google.android.material.navigation.NavigationView
+import com.bumptech.glide.Glide
 import com.serenegiant.usb.CameraDialog
 import com.serenegiant.usb.USBMonitor
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.fab_toggle_on.*
-import net.openid.appauth.AuthorizationRequest
-import net.openid.appauth.AuthorizationService
-import net.openid.appauth.AuthorizationServiceConfiguration
-import net.openid.appauth.ResponseTypeValues
+import kotlinx.android.synthetic.main.nav_header.*
+import kotlinx.coroutines.launch
 import timber.log.Timber
+
+const val RC_AUTH = 100
 
 /**
  * Stream (main) activity class.
  */
 class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
-    private lateinit var mFabConstraintOn : ConstraintSet
-    private lateinit var mFabConstraintOff : ConstraintSet
-    private lateinit var mTransition : ChangeBounds
-    private val twitchManager = TwitchManager(this)
+    private lateinit var mFabConstraintOn: ConstraintSet
+    private lateinit var mFabConstraintOff: ConstraintSet
+    private lateinit var mTransition: ChangeBounds
     private var isBackPressedOnce = false
     private var isMenuPressed = true
 
     private val viewModel: MainViewModel by lazy {
-        ViewModelProvider(this).get(MainViewModel::class.java)
+        ViewModelProvider(this, MainViewModel.Factory(application)).get(MainViewModel::class.java)
     }
 
     /**
@@ -75,8 +74,10 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
         acc_drawer.setNavigationItemSelectedListener {
             when (it.itemId) {
                 R.id.action_login -> {
-                    twitchManager.authorize()
-                    app_container.closeDrawers()
+                    viewModel.getAuthorizationIntent()?.let { intent ->
+                        startActivityForResult(intent, RC_AUTH)
+                        app_container.closeDrawers()
+                    }
                     true
                 }
                 else -> false
@@ -117,6 +118,7 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
     override fun onStart() {
         super.onStart()
         Timber.v("RPISTREAM lifecycle: onStart called")
+
         viewModel.registerUsbMonitor()
     }
 
@@ -147,6 +149,16 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
         Handler().postDelayed({
             isBackPressedOnce = false
         }, 2000)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        data?.let {
+            if (requestCode == RC_AUTH) {
+                viewModel.handleAuthorizationResponse(data)
+            }
+        }
+
+        super.onActivityResult(requestCode, resultCode, data)
     }
 
     /**
@@ -247,6 +259,13 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
      * Initialize view model LiveData value observers.
      */
     private fun setObservers() {
+        viewModel.user.observe(this, Observer { user ->
+            user?.let {
+                user_id.text = user.displayName
+                Glide.with(this).load(user.profileImage).into(user_icon)
+            }
+        })
+
         viewModel.usbStatus.observe(this, Observer { status ->
             status?.let {
                 when (it) {

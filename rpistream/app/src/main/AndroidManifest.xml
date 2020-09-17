@@ -51,7 +51,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="@string/twitch_oauth_redirect" />
+                <data android:scheme="@string/twitch_oauth_redirect"/>
             </intent-filter>
         </activity>
         <meta-data

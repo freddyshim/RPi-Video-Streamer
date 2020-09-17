@@ -1,23 +1,26 @@
 package com.anookday.rpistream
 
+import android.app.Application
 import android.content.Context
+import android.content.Intent
 import android.hardware.usb.UsbDevice
-import android.widget.Toast
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.*
 import com.anookday.rpistream.config.AudioConfig
 import com.anookday.rpistream.config.VideoConfig
+import com.anookday.rpistream.database.User
+import com.anookday.rpistream.database.getDatabase
+import com.anookday.rpistream.oauth.KEY_STATE
+import com.anookday.rpistream.oauth.STORE_NAME
+import com.anookday.rpistream.oauth.TwitchManager
 import com.anookday.rpistream.stream.RtmpStreamManager
 import com.anookday.rpistream.stream.StreamManager
 import com.pedro.rtplibrary.view.OpenGlView
 import com.serenegiant.usb.USBMonitor
 import com.serenegiant.usb.UVCCamera
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
+import net.openid.appauth.AuthState
 import net.ossrs.rtmp.ConnectCheckerRtmp
+import org.json.JSONException
 import timber.log.Timber
 
 enum class UsbConnectStatus { ATTACHED, DETACHED }
@@ -27,9 +30,15 @@ enum class RtmpAuthStatus { SUCCESS, FAIL }
 /**
  * ViewModel for [MainActivity].
  */
-class MainViewModel : ViewModel() {
-    private val viewModelJob = Job()
-    private val coroutineScope = CoroutineScope(viewModelJob + Dispatchers.Main)
+class MainViewModel(application: Application) : AndroidViewModel(application) {
+    // user database
+    private val database = getDatabase(application)
+
+    // twitch oauth manager
+    private val twitchManager = TwitchManager(application.applicationContext, database)
+
+    // user object
+    val user: LiveData<User?> = database.userDao.getUser()
 
     // video configuration object
     private val _videoConfig = MutableLiveData<VideoConfig>()
@@ -99,14 +108,24 @@ class MainViewModel : ViewModel() {
         _streamManager.value = RtmpStreamManager(cameraView, connectCheckerRtmp)
     }
 
+    fun getAuthorizationIntent(): Intent? {
+        return twitchManager.getAuthorizationIntent(user.value)
+    }
+
+    fun handleAuthorizationResponse(intent: Intent) {
+        viewModelScope.launch {
+            twitchManager.handleAuthorizationResponse(intent)
+        }
+    }
+
     fun registerUsbMonitor() {
-        coroutineScope.launch {
+        viewModelScope.launch {
             _usbMonitor.value?.register()
         }
     }
 
     fun unregisterUsbMonitor() {
-        coroutineScope.launch {
+        viewModelScope.launch {
             _usbMonitor.value?.unregister()
         }
     }
@@ -119,7 +138,7 @@ class MainViewModel : ViewModel() {
      * Start camera preview if there is no preview.
      */
     fun startPreview(width: Int, height: Int) {
-        coroutineScope.launch {
+        viewModelScope.launch {
             _uvcCamera.value?.let { camera ->
                 _streamManager.value?.let { stream ->
                     if (!stream.isPreview) stream.startPreview(camera, width, height)
@@ -132,7 +151,7 @@ class MainViewModel : ViewModel() {
      * Stop the current stream and preview. Destroy camera instance if initialized.
      */
     fun destroyCamera() {
-        coroutineScope.launch {
+        viewModelScope.launch {
             _uvcCamera.value?.let { camera ->
                 _streamManager.value?.let { stream ->
                     if (stream.isStreaming) stream.stopStream(camera)
@@ -182,7 +201,7 @@ class MainViewModel : ViewModel() {
             createNew: Boolean
         ) {
             Timber.v("RPISTREAM onDeviceConnectListener: Device connected")
-            coroutineScope.launch {
+            viewModelScope.launch {
                 _uvcCamera.value = UVCCamera()
                 uvcCamera.value?.let { camera ->
                     camera.open(ctrlBlock)
@@ -217,7 +236,7 @@ class MainViewModel : ViewModel() {
 
         override fun onDisconnect(device: UsbDevice?, ctrlBlock: USBMonitor.UsbControlBlock?) {
             Timber.v("RPISTREAM onDeviceConnectListener: Device disconnected")
-            coroutineScope.launch {
+            viewModelScope.launch {
                 uvcCamera.value?.close()
                 _videoStatus.value = null
             }
@@ -262,4 +281,16 @@ class MainViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Factory for constructing MainViewModel with parameter
+     */
+    class Factory(val app: Application): ViewModelProvider.Factory {
+        override fun <T: ViewModel?> create(modelClass: Class<T>): T {
+            if (modelClass.isAssignableFrom(MainViewModel::class.java)) {
+                @Suppress("UNCHECKED_CAST")
+                return MainViewModel(app) as T
+            }
+            throw IllegalArgumentException("Unable to construct view model")
+        }
+    }
 }
