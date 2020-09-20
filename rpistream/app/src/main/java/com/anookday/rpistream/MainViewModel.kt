@@ -65,11 +65,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val uvcCamera: LiveData<UVCCamera>
         get() = _uvcCamera
 
-    // URI address to which the stream output is sent
-    private val _streamUri = MutableLiveData<String>()
-    val streamUri: LiveData<String>
-        get() = _streamUri
-
     // USB device status
     private val _usbStatus = MutableLiveData<UsbConnectStatus>()
     val usbStatus: LiveData<UsbConnectStatus>
@@ -130,10 +125,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun setStreamUri(uri: String) {
-        _streamUri.value = uri
-    }
-
     /**
      * Start camera preview if there is no preview.
      */
@@ -171,21 +162,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * Otherwise, stop the current stream.
      */
     fun toggleStream() {
-        _uvcCamera.value?.let { camera ->
-            _streamManager.value?.let { stream ->
-                if (!stream.isStreaming) {
-                    if (stream.prepareVideo(camera, _videoConfig.value) && stream.prepareAudio(
-                            _audioConfig.value
-                        )
-                    ) {
-                        if (_streamUri.value != null) {
-                            stream.startStream(camera, _streamUri.value!!)
-                        } else {
-                            stream.startStream(camera, "")
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                // only logged in users can toggle stream
+                user.value?.let {
+                    val streamEndpoint: String? = twitchManager.getIngestEndpoint(it.idToken, it.accessToken)
+                    if (streamEndpoint != null) {
+                        _uvcCamera.value?.let { camera ->
+                            _streamManager.value?.let { stream ->
+                                // start stream
+                                if (!stream.isStreaming) {
+                                    if (stream.prepareVideo(camera, _videoConfig.value) && stream.prepareAudio(_audioConfig.value)) {
+                                        stream.startStream(camera, streamEndpoint)
+                                    }
+                                }
+                                // stop stream
+                                else {
+                                    stream.stopStream(camera)
+                                }
+                            }
                         }
                     }
-                } else {
-                    stream.stopStream(camera)
                 }
             }
         }

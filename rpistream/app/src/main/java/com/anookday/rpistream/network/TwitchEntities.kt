@@ -20,3 +20,28 @@ data class TwitchProfile(
     val view_count: Int,
     val email: String
 )
+
+@JsonClass(generateAdapter = true)
+data class TwitchStreamKeyList(
+    val data: List<TwitchStreamKey>
+)
+
+@JsonClass(generateAdapter = true)
+data class TwitchStreamKey(
+    val stream_key: String
+)
+
+@JsonClass(generateAdapter = true)
+data class TwitchIngestList(
+    val ingests: List<TwitchIngest>
+)
+
+@JsonClass(generateAdapter = true)
+data class TwitchIngest(
+    val _id: Int,
+    val availability: Float,
+    val default: Boolean,
+    val name: String,
+    val url_template: String,
+    val priority: Int
+)

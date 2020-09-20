@@ -47,6 +47,7 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
     private lateinit var mTransition: ChangeBounds
     private var isBackPressedOnce = false
     private var isMenuPressed = true
+    private var isLoggedIn = false
 
     private val viewModel: MainViewModel by lazy {
         ViewModelProvider(this, MainViewModel.Factory(application)).get(MainViewModel::class.java)
@@ -99,7 +100,6 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
 
         // set event callbacks
         binding.cameraPreview.holder.addCallback(surfaceViewCallback)
-        binding.streamUriTextbox.addTextChangedListener(onUriChangeListener)
 
         // set observers
         setObservers()
@@ -187,7 +187,11 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
      * Stream onClickListener object
      */
     private var streamOnClickListener = View.OnClickListener {
-        viewModel.toggleStream()
+        if (isLoggedIn) {
+            viewModel.toggleStream()
+        } else {
+            Toast.makeText(this, "Please log in to start streaming.", Toast.LENGTH_SHORT).show()
+        }
     }
 
     /**
@@ -229,24 +233,6 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
     }
 
     /**
-     * StreamUriTextBox onChangeListener object
-     */
-    private var onUriChangeListener = object : TextWatcher {
-        override fun afterTextChanged(s: Editable?) {
-            //
-        }
-
-        override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
-            //
-        }
-
-        override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-            viewModel.setStreamUri(s.toString())
-        }
-
-    }
-
-    /**
      * Override methods for CameraDialogParent
      */
     override fun getUSBMonitor(): USBMonitor = viewModel.usbMonitor.value!!
@@ -260,9 +246,14 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
      */
     private fun setObservers() {
         viewModel.user.observe(this, Observer { user ->
-            user?.let {
+            if (user != null) {
+                isLoggedIn = true
                 user_id.text = user.displayName
                 Glide.with(this).load(user.profileImage).into(user_icon)
+            } else {
+                isLoggedIn = false
+                user_id.text = getString(R.string.no_user_text)
+                user_icon.setImageResource(R.drawable.ic_baseline_account_circle_24)
             }
         })
 

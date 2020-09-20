@@ -8,6 +8,7 @@ import net.openid.appauth.AuthState
 data class User(
     @PrimaryKey val idToken: String,
     val authStateJson: String,
+    val accessToken: String,
     val displayName: String,
     val description: String,
     val email: String,
