@@ -3,6 +3,7 @@ package com.anookday.rpistream.stream
 import android.content.Context
 import android.media.MediaCodec
 import android.media.MediaFormat
+import android.media.MediaRecorder
 import com.anookday.rpistream.config.AudioConfig
 import com.anookday.rpistream.config.VideoConfig
 import com.pedro.encoder.Frame
@@ -23,9 +24,6 @@ import java.nio.ByteBuffer
 /**
  * Wrapper class to stream video output from OpenGlView (custom implementation of SurfaceView that
  * incorporates OpenGL) and audio output from an audio input source to a designated web server.
- *
- * This class is based on that of pedroSG94's "USBBase", which can be found at the following github repository:
- * https://github.com/pedroSG94/Stream-USB-test/
  */
 abstract class StreamManager(openGlView: OpenGlView) {
     private val context: Context = openGlView.context
@@ -133,6 +131,7 @@ abstract class StreamManager(openGlView: OpenGlView) {
         if (config == null) return false
 
         microphoneManager.createMicrophone(
+            MediaRecorder.AudioSource.MIC,
             config.sampleRate,
             config.stereo,
             config.echoCanceler,
@@ -196,7 +195,7 @@ abstract class StreamManager(openGlView: OpenGlView) {
     private fun startEncoders(uvcCamera: UVCCamera) {
         videoEncoder.start()
         audioEncoder.start()
-//        microphoneManager.start()
+        microphoneManager.start()
         glInterface.stop()
         glInterface.setEncoderSize(videoEncoder.width, videoEncoder.height)
         glInterface.setRotation(0)

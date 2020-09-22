@@ -4,6 +4,9 @@ import android.animation.ObjectAnimator
 import android.app.PendingIntent
 import android.content.Intent
 import android.content.res.ColorStateList
+import android.media.AudioFormat
+import android.media.AudioRecord
+import android.media.MediaRecorder
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -95,6 +98,7 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
 
         // set click listeners
         video_fab.setOnClickListener(uvcCameraOnClickListener)
+        audio_fab.setOnClickListener(audioOnClickListener)
         stream_fab.setOnClickListener(streamOnClickListener)
         menu_fab.setOnClickListener(menuFabOnClickListener)
 
@@ -179,6 +183,26 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
                 CameraDialog.showDialog(this)
             } else {
                 viewModel.destroyCamera()
+            }
+        }
+    }
+
+    /**
+     * Audio onClickListener object
+     */
+    private var audioOnClickListener = View.OnClickListener {
+        viewModel.audioConfig.value?.let { config ->
+            val recorder = AudioRecord(
+                MediaRecorder.AudioSource.MIC,
+                config.sampleRate,
+                if (config.stereo) AudioFormat.CHANNEL_IN_STEREO else AudioFormat.CHANNEL_IN_MONO,
+                AudioFormat.ENCODING_PCM_16BIT,
+                128*1024
+            )
+            if (recorder.state == AudioRecord.STATE_INITIALIZED) {
+                Timber.i("AudioRecord initialized")
+            } else {
+                Timber.i("AudioRecord not initialized")
             }
         }
     }
