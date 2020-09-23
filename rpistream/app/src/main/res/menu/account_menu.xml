@@ -6,4 +6,10 @@
         android:icon="@drawable/twitch_icon"
         app:showAsAction="ifRoom"
         android:title="@string/action_login" />
+
+    <item
+        android:id="@+id/action_logout"
+        android:icon="@drawable/ic_baseline_input_24"
+        app:showAsAction="ifRoom"
+        android:title="Log Out" />
 </menu>

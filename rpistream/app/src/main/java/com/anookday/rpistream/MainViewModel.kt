@@ -113,6 +113,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun logout() {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                database.userDao.delete()
+            }
+        }
+    }
+
     fun registerUsbMonitor() {
         viewModelScope.launch {
             _usbMonitor.value?.register()

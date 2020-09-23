@@ -80,8 +80,11 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
                 R.id.action_login -> {
                     viewModel.getAuthorizationIntent()?.let { intent ->
                         startActivityForResult(intent, RC_AUTH)
-                        app_container.closeDrawers()
                     }
+                    true
+                }
+                R.id.action_logout -> {
+                    viewModel.logout()
                     true
                 }
                 else -> false
@@ -110,6 +113,7 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
 
         // initialize ViewModel objects
         viewModel.init(this, binding.cameraPreview)
+        viewModel.registerUsbMonitor()
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -122,19 +126,17 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
     override fun onStart() {
         super.onStart()
         Timber.v("RPISTREAM lifecycle: onStart called")
-
-        viewModel.registerUsbMonitor()
     }
 
 
     override fun onStop() {
         Timber.v("RPISTREAM lifecycle: onStop called")
-        viewModel.unregisterUsbMonitor()
         super.onStop()
     }
 
     override fun onDestroy() {
         Timber.v("RPISTREAM lifecycle: onDestroy called")
+        viewModel.unregisterUsbMonitor()
         viewModel.destroyCamera()
         viewModel.destroyUsbMonitor()
         super.onDestroy()
@@ -274,10 +276,14 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
                 isLoggedIn = true
                 user_id.text = user.displayName
                 Glide.with(this).load(user.profileImage).into(user_icon)
+                acc_drawer.menu.findItem(R.id.action_login).isVisible = false
+                acc_drawer.menu.findItem(R.id.action_logout).isVisible = true
             } else {
                 isLoggedIn = false
                 user_id.text = getString(R.string.no_user_text)
                 user_icon.setImageResource(R.drawable.ic_baseline_account_circle_24)
+                acc_drawer.menu.findItem(R.id.action_login).isVisible = true
+                acc_drawer.menu.findItem(R.id.action_logout).isVisible = false
             }
         })
 
