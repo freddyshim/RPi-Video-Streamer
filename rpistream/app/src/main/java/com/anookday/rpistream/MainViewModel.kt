@@ -136,11 +136,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     /**
      * Start camera preview if there is no preview.
      */
-    fun startPreview(width: Int, height: Int) {
+    fun startPreview(width: Int?, height: Int?) {
         viewModelScope.launch {
             _uvcCamera.value?.let { camera ->
                 _streamManager.value?.let { stream ->
                     if (!stream.isPreview) stream.startPreview(camera, width, height)
+                }
+            }
+        }
+    }
+
+    /**
+     * Stop camera preview if there is a preview.
+     */
+    fun stopPreview() {
+        viewModelScope.launch {
+            _uvcCamera.value?.let { camera ->
+                _streamManager.value?.let { stream ->
+                    if (stream.isPreview) stream.stopPreview(camera)
+
                 }
             }
         }
