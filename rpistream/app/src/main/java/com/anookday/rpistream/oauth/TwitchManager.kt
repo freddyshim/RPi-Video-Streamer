@@ -8,9 +8,7 @@ import com.anookday.rpistream.R
 import com.anookday.rpistream.RC_AUTH
 import com.anookday.rpistream.database.User
 import com.anookday.rpistream.database.UserDatabase
-import com.anookday.rpistream.network.Network
-import com.anookday.rpistream.network.TwitchProfile
-import com.anookday.rpistream.network.TwitchProfileList
+import com.anookday.rpistream.network.*
 import kotlinx.coroutines.*
 import net.openid.appauth.*
 import timber.log.Timber
@@ -54,7 +52,6 @@ class TwitchManager(context: Context, database: UserDatabase) : OAuthHandler(con
                 val authStateJson = authState.jsonSerializeString()
                 Timber.i("Handled authorization response: $authStateJson")
                 val authService = AuthorizationService(context)
-
                 val clientAuth: ClientAuthentication = ClientSecretPost(context.getString(R.string.twitch_client_secret))
                 authService.performTokenRequest(response.createTokenExchangeRequest(), clientAuth) { resp, ex ->
                     if (ex != null) {
@@ -89,13 +86,16 @@ class TwitchManager(context: Context, database: UserDatabase) : OAuthHandler(con
      */
     private suspend fun requestUserProfile(state: AuthState, accessToken: String) {
         withContext(Dispatchers.IO) {
-            val clientId = context.getString(R.string.twitch_client_id)
-            val userContainer: TwitchProfileList = Network.twitchService.getUserProfile(clientId, "Bearer $accessToken")
+            val userContainer: TwitchProfileList = Network.twitchService.getUserProfile(
+                context.getString(R.string.twitch_client_id),
+                "Bearer $accessToken"
+            )
             if (userContainer.data.isNotEmpty()) {
                 val profile: TwitchProfile = userContainer.data[0]
                 val user = User(
                     profile.id,
                     state.jsonSerializeString(),
+                    accessToken,
                     profile.display_name,
                     profile.description,
                     profile.email,
@@ -104,5 +104,31 @@ class TwitchManager(context: Context, database: UserDatabase) : OAuthHandler(con
                 database.userDao.updateUser(user)
             }
         }
+    }
+
+    /**
+     * Get the closest Twitch ingest endpoint address.
+     */
+    suspend fun getIngestEndpoint(userId: String, accessToken: String): String? {
+        var result: String? = null
+
+        withContext(Dispatchers.IO) {
+            val endpointList: TwitchIngestList = Network.twitchIngestService.getEndpoints()
+            if (endpointList.ingests.isNotEmpty()) {
+                val endpoint: TwitchIngest = endpointList.ingests[0]
+                Timber.i("Closest Twitch ingest endpoint -> ${endpoint.name}")
+                val streamKeyList: TwitchStreamKeyList = Network.twitchService.getStreamKey(
+                    context.getString(R.string.twitch_client_id),
+                    "Bearer $accessToken",
+                    userId
+                )
+                if (streamKeyList.data.isNotEmpty()) {
+                    val streamKey: TwitchStreamKey = streamKeyList.data[0]
+                    result = endpoint.url_template.replace("{stream_key}", streamKey.stream_key)
+                }
+            }
+        }
+
+        return result
     }
 }
