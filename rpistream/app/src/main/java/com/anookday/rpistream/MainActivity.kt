@@ -1,46 +1,59 @@
 package com.anookday.rpistream
 
-import android.animation.Animator
-import android.animation.AnimatorInflater
-import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
-import android.content.Context
+import android.app.PendingIntent
+import android.content.Intent
 import android.content.res.ColorStateList
+import android.media.AudioFormat
+import android.media.AudioRecord
+import android.media.MediaRecorder
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.text.Editable
+import android.text.TextUtils
 import android.text.TextWatcher
 import android.transition.ChangeBounds
 import android.transition.TransitionManager
+import android.view.MenuItem
 import android.view.SurfaceHolder
 import android.view.View
-import android.view.animation.Animation
-import android.view.animation.AnimationUtils
-import android.view.animation.AnticipateOvershootInterpolator
 import android.view.animation.OvershootInterpolator
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.Toolbar
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.content.ContextCompat
+import androidx.core.view.GravityCompat
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import com.anookday.rpistream.databinding.ActivityMainBinding
+import com.bumptech.glide.Glide
 import com.serenegiant.usb.CameraDialog
 import com.serenegiant.usb.USBMonitor
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.fab_toggle_on.*
+import kotlinx.android.synthetic.main.nav_header.*
+import kotlinx.coroutines.launch
 import timber.log.Timber
+
+const val RC_AUTH = 100
 
 /**
  * Stream (main) activity class.
  */
 class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
+    private lateinit var mFabConstraintOn: ConstraintSet
+    private lateinit var mFabConstraintOff: ConstraintSet
+    private lateinit var mTransition: ChangeBounds
     private var isBackPressedOnce = false
     private var isMenuPressed = true
+    private var isLoggedIn = false
 
     private val viewModel: MainViewModel by lazy {
-        ViewModelProvider(this).get(MainViewModel::class.java)
+        ViewModelProvider(this, MainViewModel.Factory(application)).get(MainViewModel::class.java)
     }
 
     /**
@@ -50,51 +63,80 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
         super.onCreate(savedInstanceState)
         Timber.v("RPISTREAM lifecycle: onCreate called")
 
-        val binding: ActivityMainBinding = DataBindingUtil.setContentView(this, R.layout.activity_main)
+        // initialize data binding
+        val binding: ActivityMainBinding =
+            DataBindingUtil.setContentView(this, R.layout.activity_main)
         binding.lifecycleOwner = this
         binding.viewModel = viewModel
 
-        val fabConstraintOn = ConstraintSet()
-        fabConstraintOn.clone(this, R.layout.fab_toggle_on)
-        val fabConstraintOff = ConstraintSet()
-        fabConstraintOff.clone(this, R.layout.fab_toggle_off)
-        val transition = ChangeBounds()
-        transition.interpolator = OvershootInterpolator(1.0f)
-
-        video_fab.setOnClickListener(uvcCameraOnClickListener)
-        stream_fab.setOnClickListener(streamOnClickListener)
-        menu_fab.setOnClickListener {
-            TransitionManager.beginDelayedTransition(fab_container, transition)
-            if (isMenuPressed) {
-                fabConstraintOn.applyTo(fab_container)
-            } else {
-                fabConstraintOff.applyTo(fab_container)
-            }
-            isMenuPressed = !isMenuPressed
+        // initialize toolbar and navigation drawer
+        setSupportActionBar(app_bar as Toolbar)
+        supportActionBar?.let {
+            it.setHomeAsUpIndicator(R.drawable.ic_baseline_account_circle_24)
+            it.setDisplayHomeAsUpEnabled(true)
         }
-        binding.cameraPreview.holder.addCallback(surfaceViewCallback)
-        binding.streamUriTextbox.addTextChangedListener(onUriChangeListener)
+        acc_drawer.setNavigationItemSelectedListener {
+            when (it.itemId) {
+                R.id.action_login -> {
+                    viewModel.getAuthorizationIntent()?.let { intent ->
+                        startActivityForResult(intent, RC_AUTH)
+                    }
+                    true
+                }
+                R.id.action_logout -> {
+                    viewModel.logout()
+                    true
+                }
+                else -> false
+            }
+        }
 
+        // initialize activity (layout) variables
+        mFabConstraintOn = ConstraintSet()
+        mFabConstraintOn.clone(this, R.layout.fab_toggle_on)
+        mFabConstraintOff = ConstraintSet()
+        mFabConstraintOff.clone(this, R.layout.fab_toggle_off)
+        mTransition = ChangeBounds()
+        mTransition.interpolator = OvershootInterpolator(1.0f)
+
+        // set click listeners
+        video_fab.setOnClickListener(uvcCameraOnClickListener)
+        audio_fab.setOnClickListener(audioOnClickListener)
+        stream_fab.setOnClickListener(streamOnClickListener)
+        menu_fab.setOnClickListener(menuFabOnClickListener)
+
+        // set event callbacks
+        binding.cameraPreview.holder.addCallback(surfaceViewCallback)
+
+        // set observers
         setObservers()
 
+        // initialize ViewModel objects
         viewModel.init(this, binding.cameraPreview)
-  }
+        viewModel.registerUsbMonitor()
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
+            android.R.id.home -> app_container.openDrawer(GravityCompat.START)
+        }
+        return true
+    }
 
     override fun onStart() {
         super.onStart()
         Timber.v("RPISTREAM lifecycle: onStart called")
-        viewModel.registerUsbMonitor()
     }
 
 
     override fun onStop() {
         Timber.v("RPISTREAM lifecycle: onStop called")
-        viewModel.unregisterUsbMonitor()
         super.onStop()
     }
 
     override fun onDestroy() {
         Timber.v("RPISTREAM lifecycle: onDestroy called")
+        viewModel.unregisterUsbMonitor()
         viewModel.destroyCamera()
         viewModel.destroyUsbMonitor()
         super.onDestroy()
@@ -113,6 +155,16 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
         Handler().postDelayed({
             isBackPressedOnce = false
         }, 2000)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        data?.let {
+            if (requestCode == RC_AUTH) {
+                viewModel.handleAuthorizationResponse(data)
+            }
+        }
+
+        super.onActivityResult(requestCode, resultCode, data)
     }
 
     /**
@@ -138,16 +190,59 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
     }
 
     /**
+     * Audio onClickListener object
+     */
+    private var audioOnClickListener = View.OnClickListener {
+        viewModel.audioConfig.value?.let { config ->
+            val recorder = AudioRecord(
+                MediaRecorder.AudioSource.MIC,
+                config.sampleRate,
+                if (config.stereo) AudioFormat.CHANNEL_IN_STEREO else AudioFormat.CHANNEL_IN_MONO,
+                AudioFormat.ENCODING_PCM_16BIT,
+                128*1024
+            )
+            if (recorder.state == AudioRecord.STATE_INITIALIZED) {
+                Timber.i("AudioRecord initialized")
+            } else {
+                Timber.i("AudioRecord not initialized")
+            }
+        }
+    }
+
+    /**
      * Stream onClickListener object
      */
     private var streamOnClickListener = View.OnClickListener {
-        viewModel.toggleStream()
+        if (isLoggedIn) {
+            viewModel.toggleStream()
+        } else {
+            Toast.makeText(this, "Please log in to start streaming.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    /**
+     * menu fab onClickListener object
+     */
+    private var menuFabOnClickListener = View.OnClickListener {
+        var alpha = 0F
+        TransitionManager.beginDelayedTransition(fab_container, mTransition)
+        if (isMenuPressed) {
+            alpha = 0.75F
+            mFabConstraintOn.applyTo(fab_container)
+        } else {
+            mFabConstraintOff.applyTo(fab_container)
+        }
+        ObjectAnimator.ofFloat(main_dimmed_bg, "alpha", alpha).apply {
+            duration = 300
+            start()
+        }
+        isMenuPressed = !isMenuPressed
     }
 
     /**
      * SurfaceView callback object
      */
-    private var surfaceViewCallback = object: SurfaceHolder.Callback {
+    private var surfaceViewCallback = object : SurfaceHolder.Callback {
         override fun surfaceCreated(holder: SurfaceHolder) {
             Timber.v("RPISTREAM surfaceViewCallback: Surface created")
         }
@@ -164,24 +259,6 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
     }
 
     /**
-     * StreamUriTextBox onChangeListener object
-     */
-    private var onUriChangeListener = object: TextWatcher {
-        override fun afterTextChanged(s: Editable?) {
-            //
-        }
-
-        override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
-            //
-        }
-
-        override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-            viewModel.setStreamUri(s.toString())
-        }
-
-    }
-
-    /**
      * Override methods for CameraDialogParent
      */
     override fun getUSBMonitor(): USBMonitor = viewModel.usbMonitor.value!!
@@ -194,9 +271,25 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
      * Initialize view model LiveData value observers.
      */
     private fun setObservers() {
+        viewModel.user.observe(this, Observer { user ->
+            if (user != null) {
+                isLoggedIn = true
+                user_id.text = user.displayName
+                Glide.with(this).load(user.profileImage).into(user_icon)
+                acc_drawer.menu.findItem(R.id.action_login).isVisible = false
+                acc_drawer.menu.findItem(R.id.action_logout).isVisible = true
+            } else {
+                isLoggedIn = false
+                user_id.text = getString(R.string.no_user_text)
+                user_icon.setImageResource(R.drawable.ic_baseline_account_circle_24)
+                acc_drawer.menu.findItem(R.id.action_login).isVisible = true
+                acc_drawer.menu.findItem(R.id.action_logout).isVisible = false
+            }
+        })
+
         viewModel.usbStatus.observe(this, Observer { status ->
             status?.let {
-                when(it) {
+                when (it) {
                     UsbConnectStatus.ATTACHED -> showMessage("USB device attached")
                     UsbConnectStatus.DETACHED -> showMessage("USB device detached")
                 }
@@ -205,7 +298,7 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
 
         viewModel.connectStatus.observe(this, Observer { status ->
             status?.let {
-                when(it) {
+                when (it) {
                     RtmpConnectStatus.SUCCESS -> {
                         stream_fab_text.text = getText(R.string.stream_on_text)
                         stream_fab.backgroundTintList = ColorStateList.valueOf(
@@ -227,7 +320,7 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
 
         viewModel.authStatus.observe(this, Observer { status ->
             status?.let {
-                when(it) {
+                when (it) {
                     RtmpAuthStatus.SUCCESS -> showMessage("Auth success")
                     RtmpAuthStatus.FAIL -> showMessage("Auth error")
                 }

@@ -18,7 +18,6 @@
             app:layout_constraintBottom_toTopOf="@+id/audio_fab"
             app:layout_constraintEnd_toEndOf="@+id/menu_fab"
             app:layout_constraintStart_toStartOf="@+id/menu_fab"
-            app:layout_constraintTop_toTopOf="parent"
             app:srcCompat="@drawable/ic_baseline_videocam_off_24"
             app:tint="@color/colorIconText" />
 

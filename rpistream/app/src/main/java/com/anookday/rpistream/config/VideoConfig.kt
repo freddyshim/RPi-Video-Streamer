@@ -15,7 +15,7 @@ data class VideoConfig(
     val width: Int = 1920,
     val height: Int = 1080,
     val fps: Int = 30,
-    val bitrate: Int = 4000 * 1024,
+    val bitrate: Int = 8000 * 1024,
     val hardwareRotation: Boolean = false,
     val iFrameInterval: Int = 0,
     val rotation: Int = 0

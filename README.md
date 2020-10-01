@@ -65,3 +65,12 @@ ndk.dir={NDK_LOCATION}
 ```
 Make sure to substitute {NDK_LOCATION} with the correct path to the NDK directory.
 Then, in Android Studio, go to Build > Rebuild Project and wait for the project to finish building. After, Run the "App" module on your Android device.
+
+Trouble Shooting
+-------
+##### 1. Service Not Running
+On your Raspberry Pi check that the piwebcam service is running by using the command `systemctl | grep piwebcam`
+
+If it's not then you can view the service logs using the command `journalctl -u piwebcam.service` to find the root problem.
+
+A common problem may be that `dev/video0` is not being detected as a video device. A fix for this may be to run the command `echo "bcm2835-v4l2" | sudo tee -a /etc/modules`.

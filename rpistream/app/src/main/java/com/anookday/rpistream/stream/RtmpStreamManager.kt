@@ -6,7 +6,8 @@ import net.ossrs.rtmp.ConnectCheckerRtmp
 import net.ossrs.rtmp.SrsFlvMuxer
 import java.nio.ByteBuffer
 
-class RtmpStreamManager(openGlView: OpenGlView, connectChecker: ConnectCheckerRtmp): StreamManager(openGlView) {
+class RtmpStreamManager(openGlView: OpenGlView, connectChecker: ConnectCheckerRtmp) :
+    StreamManager(openGlView) {
     private val srsFlvMuxer = SrsFlvMuxer(connectChecker)
 
     override fun onSpsPpsVpsRtp(sps: ByteBuffer, pps: ByteBuffer, vps: ByteBuffer?) {

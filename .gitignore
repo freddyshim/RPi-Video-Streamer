@@ -40,3 +40,6 @@ Thumbs.db
 rpistream/libuvccamera/build/
 rpistream/libuvccamera/src/main/obj/
 rpistream/libuvccamera/src/main/libs/
+
+# Secret keys resource file
+keys.xml

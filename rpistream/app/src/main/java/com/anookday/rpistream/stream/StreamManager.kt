@@ -1,8 +1,10 @@
 package com.anookday.rpistream.stream
 
 import android.content.Context
+import android.graphics.ImageFormat
 import android.media.MediaCodec
 import android.media.MediaFormat
+import android.media.MediaRecorder
 import com.anookday.rpistream.config.AudioConfig
 import com.anookday.rpistream.config.VideoConfig
 import com.pedro.encoder.Frame
@@ -16,6 +18,7 @@ import com.pedro.encoder.video.VideoEncoder
 import com.pedro.rtplibrary.view.GlInterface
 import com.pedro.rtplibrary.view.OffScreenGlThread
 import com.pedro.rtplibrary.view.OpenGlView
+import com.serenegiant.usb.IFrameCallback
 import com.serenegiant.usb.UVCCamera
 import timber.log.Timber
 import java.nio.ByteBuffer
@@ -23,9 +26,6 @@ import java.nio.ByteBuffer
 /**
  * Wrapper class to stream video output from OpenGlView (custom implementation of SurfaceView that
  * incorporates OpenGL) and audio output from an audio input source to a designated web server.
- *
- * This class is based on that of pedroSG94's "USBBase", which can be found at the following github repository:
- * https://github.com/pedroSG94/Stream-USB-test/
  */
 abstract class StreamManager(openGlView: OpenGlView) {
     private val context: Context = openGlView.context
@@ -34,6 +34,8 @@ abstract class StreamManager(openGlView: OpenGlView) {
     var isPreview = false
     private var videoFormat: MediaFormat? = null
     private var audioFormat: MediaFormat? = null
+    private var previewWidth = 720
+    private var previewHeight = 480
 
     protected abstract fun onSpsPpsVpsRtp(sps: ByteBuffer, pps: ByteBuffer, vps: ByteBuffer?)
     protected abstract fun prepareAudioRtp(isStereo: Boolean, sampleRate: Int)
@@ -49,7 +51,7 @@ abstract class StreamManager(openGlView: OpenGlView) {
     /**
      * Video encoder class
      */
-    protected val videoEncoder: VideoEncoder = VideoEncoder(object: GetVideoData {
+    protected val videoEncoder: VideoEncoder = VideoEncoder(object : GetVideoData {
         override fun onVideoFormat(mediaFormat: MediaFormat) {
             videoFormat = mediaFormat
         }
@@ -76,7 +78,7 @@ abstract class StreamManager(openGlView: OpenGlView) {
     /**
      * Audio encoder class
      */
-    private val audioEncoder: AudioEncoder = AudioEncoder(object: GetAacData {
+    private val audioEncoder: AudioEncoder = AudioEncoder(object : GetAacData {
         override fun onAudioFormat(mediaFormat: MediaFormat?) {
             audioFormat = mediaFormat
         }
@@ -91,11 +93,8 @@ abstract class StreamManager(openGlView: OpenGlView) {
     /**
      * Microphone manager class
      */
-    private val microphoneManager: MicrophoneManager = MicrophoneManager(object: GetMicrophoneData {
-        override fun inputPCMData(frame: Frame?) {
-            audioEncoder.inputPCMData(frame)
-        }
-    })
+    private val microphoneManager: MicrophoneManager =
+        MicrophoneManager { frame -> audioEncoder.inputPCMData(frame) }
 
     /**
      * Prepare to stream video. Return true iff system is able and ready to stream video output.
@@ -113,7 +112,7 @@ abstract class StreamManager(openGlView: OpenGlView) {
             isPreview = true
         }
 
-        return videoEncoder.prepareVideoEncoder(
+        val result = videoEncoder.prepareVideoEncoder(
             config.width,
             config.height,
             config.fps,
@@ -121,8 +120,20 @@ abstract class StreamManager(openGlView: OpenGlView) {
             config.rotation,
             config.hardwareRotation,
             config.iFrameInterval,
-            FormatVideoEncoder.SURFACE
+            FormatVideoEncoder.YUV420SEMIPLANAR
         )
+
+        uvcCamera.setFrameCallback(
+            { frame ->
+                frame.rewind()
+                val byteArray = ByteArray(frame.remaining())
+                frame.get(byteArray)
+                videoEncoder.inputYUVData(Frame(byteArray, 0, false, ImageFormat.YUV_420_888))
+            },
+            UVCCamera.PIXEL_FORMAT_YUV420SP
+        )
+
+        return result
     }
 
     /**
@@ -136,6 +147,7 @@ abstract class StreamManager(openGlView: OpenGlView) {
         if (config == null) return false
 
         microphoneManager.createMicrophone(
+            MediaRecorder.AudioSource.MIC,
             config.sampleRate,
             config.stereo,
             config.echoCanceler,
@@ -158,10 +170,12 @@ abstract class StreamManager(openGlView: OpenGlView) {
      * @param width         Width of preview frame in px.
      * @param height        Height of preview frame in px.
      */
-    fun startPreview(uvcCamera: UVCCamera, width: Int, height: Int) {
+    fun startPreview(uvcCamera: UVCCamera, width: Int?, height: Int?) {
         if (!isStreaming && !isPreview && glInterface !is OffScreenGlThread) {
+            if (width != null) previewWidth = width
+            if (height != null) previewHeight = height
             Timber.v("RPISTREAM preview enabled")
-            glInterface.setEncoderSize(width, height)
+            glInterface.setEncoderSize(previewWidth, previewHeight)
             glInterface.setRotation(0)
             glInterface.start()
             uvcCamera.setPreviewTexture(glInterface.surfaceTexture)
@@ -199,7 +213,7 @@ abstract class StreamManager(openGlView: OpenGlView) {
     private fun startEncoders(uvcCamera: UVCCamera) {
         videoEncoder.start()
         audioEncoder.start()
-//        microphoneManager.start()
+        microphoneManager.start()
         glInterface.stop()
         glInterface.setEncoderSize(videoEncoder.width, videoEncoder.height)
         glInterface.setRotation(0)

@@ -5,4 +5,7 @@
     <string name="audio_off_text">Audio not connected</string>
     <string name="stream_off_text">Stream: OFF</string>
     <string name="stream_on_text">Stream: ON</string>
+    <string name="action_login">Log In to Twitch</string>
+    <string name="user_picture_description">User profile picture</string>
+    <string name="no_user_text">No User</string>
 </resources>
