@@ -248,13 +248,14 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
         }
 
         override fun surfaceChanged(holder: SurfaceHolder?, format: Int, width: Int, height: Int) {
-            if (width == 0 || height == 0) return
             Timber.v("RPISTREAM surfaceViewCallback: Surface changed")
+            if (width == 0 || height == 0) return
             viewModel.startPreview(width, height)
         }
 
         override fun surfaceDestroyed(holder: SurfaceHolder?) {
             Timber.v("RPISTREAM surfaceViewCallback: Surface destroyed")
+            viewModel.initBackgroundProcess()
         }
     }
 

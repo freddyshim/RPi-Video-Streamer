@@ -32,6 +32,7 @@ abstract class StreamManager(openGlView: OpenGlView) {
     private var glInterface: GlInterface = openGlView
     var isStreaming = false
     var isPreview = false
+    var isBackground = false
     private var videoFormat: MediaFormat? = null
     private var audioFormat: MediaFormat? = null
     private var previewWidth = 720
@@ -164,6 +165,21 @@ abstract class StreamManager(openGlView: OpenGlView) {
     }
 
     /**
+     * Set GlInterface. If one exists, replace the old one with the new GlInterface.
+     */
+    fun setGlInterface(newGlInterface: GlInterface) {
+        if (isPreview || isStreaming) {
+            glInterface.removeMediaCodecSurface()
+            glInterface.stop()
+            glInterface = newGlInterface
+            prepareGlView()
+        } else {
+            glInterface = newGlInterface
+            glInterface.init()
+        }
+    }
+
+    /**
      * Start camera preview if preview is currently disabled.
      *
      * @param uvcCamera     UVC Camera module.
@@ -171,7 +187,7 @@ abstract class StreamManager(openGlView: OpenGlView) {
      * @param height        Height of preview frame in px.
      */
     fun startPreview(uvcCamera: UVCCamera, width: Int?, height: Int?) {
-        if (!isStreaming && !isPreview && glInterface !is OffScreenGlThread) {
+        if (isBackground || !isStreaming && !isPreview && glInterface !is OffScreenGlThread) {
             if (width != null) previewWidth = width
             if (height != null) previewHeight = height
             Timber.v("RPISTREAM preview enabled")
@@ -181,6 +197,7 @@ abstract class StreamManager(openGlView: OpenGlView) {
             uvcCamera.setPreviewTexture(glInterface.surfaceTexture)
             uvcCamera.startPreview()
             isPreview = true
+            isBackground = false
         }
     }
 

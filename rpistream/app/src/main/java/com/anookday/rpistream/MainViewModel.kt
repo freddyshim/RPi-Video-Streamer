@@ -139,9 +139,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun startPreview(width: Int?, height: Int?) {
         viewModelScope.launch {
             _uvcCamera.value?.let { camera ->
-                _streamManager.value?.let { stream ->
-                    if (!stream.isPreview) stream.startPreview(camera, width, height)
-                }
+                _streamManager.value?.startPreview(camera, width, height)
             }
         }
     }
@@ -152,10 +150,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun stopPreview() {
         viewModelScope.launch {
             _uvcCamera.value?.let { camera ->
-                _streamManager.value?.let { stream ->
-                    if (stream.isPreview) stream.stopPreview(camera)
-
-                }
+                _streamManager.value?.stopPreview(camera)
             }
         }
     }
@@ -206,6 +201,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    fun initBackgroundProcess() {
+        _streamManager.value?.let {
+            if (it.isPreview || it.isStreaming) {
+                it.isBackground = true
             }
         }
     }
