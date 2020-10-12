@@ -170,6 +170,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /**
+     * Enable audio recording.
+     */
+    fun toggleAudio() {
+        if (_audioStatus.value == null) {
+            _audioStatus.value = getApplication<Application>().getString(R.string.audio_on_text)
+            _streamManager.value?.audioEnabled = true
+        } else {
+            _audioStatus.value = null
+            _streamManager.value?.audioEnabled = false
+        }
+    }
+
     fun destroyUsbMonitor() {
         _usbMonitor.value?.destroy()
     }
@@ -185,18 +198,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 user.value?.let {
                     val streamEndpoint: String? = twitchManager.getIngestEndpoint(it.idToken, it.accessToken)
                     if (streamEndpoint != null) {
-                        _uvcCamera.value?.let { camera ->
-                            _streamManager.value?.let { stream ->
-                                // start stream
-                                if (!stream.isStreaming) {
-                                    if (stream.prepareVideo(camera, _videoConfig.value) && stream.prepareAudio(_audioConfig.value)) {
-                                        stream.startStream(camera, streamEndpoint)
-                                    }
+                        _streamManager.value?.let { stream ->
+                            // start stream
+                            val camera: UVCCamera? = _uvcCamera.value
+                            if (!stream.isStreaming) {
+                                var videoCheck = false
+                                var audioCheck = false
+                                if (videoStatus.value != null && camera != null) {
+                                    videoCheck = stream.prepareVideo(camera, _videoConfig.value)
                                 }
-                                // stop stream
-                                else {
-                                    stream.stopStream(camera)
+                                if (audioStatus.value != null) {
+                                    audioCheck = stream.prepareAudio(_audioConfig.value)
                                 }
+                                if (videoCheck || audioCheck) {
+                                    stream.startStream(camera, streamEndpoint)
+                                }
+                            }
+                            // stop stream
+                            else {
+                                stream.stopStream(camera)
                             }
                         }
                     }
@@ -237,11 +257,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             )
                             streamManager.value?.startPreview(camera, config.width, config.height)
                             _videoStatus.value = camera.deviceName
+                            _streamManager.value?.videoEnabled = true
                         }
                     } catch (e: IllegalArgumentException) {
                         Timber.i("RPISTREAM onDeviceConnectListener: Incorrect preview configuration passed")
                         camera.destroy()
                         _videoStatus.value = null
+                        _streamManager.value?.videoEnabled = false
                     }
                 }
             }
@@ -261,6 +283,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             viewModelScope.launch {
                 uvcCamera.value?.close()
                 _videoStatus.value = null
+                _streamManager.value?.videoEnabled = false
             }
         }
 

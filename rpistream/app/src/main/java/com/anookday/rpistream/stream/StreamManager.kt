@@ -30,6 +30,8 @@ import java.nio.ByteBuffer
 abstract class StreamManager(openGlView: OpenGlView) {
     private val context: Context = openGlView.context
     private var glInterface: GlInterface = openGlView
+    var videoEnabled = false
+    var audioEnabled = false
     var isStreaming = false
     var isPreview = false
     var isBackground = false
@@ -221,26 +223,30 @@ abstract class StreamManager(openGlView: OpenGlView) {
      * @param uvcCamera UVC Camera module.
      * @param url URL of the stream's designated location (eg. rtmp://live.twitch.tv/app/{stream_key})
      */
-    fun startStream(uvcCamera: UVCCamera, url: String) {
+    fun startStream(uvcCamera: UVCCamera?, url: String) {
         isStreaming = true
         startEncoders(uvcCamera)
         startStreamRtp(url)
     }
 
-    private fun startEncoders(uvcCamera: UVCCamera) {
-        videoEncoder.start()
-        audioEncoder.start()
-        microphoneManager.start()
-        glInterface.stop()
-        glInterface.setEncoderSize(videoEncoder.width, videoEncoder.height)
-        glInterface.setRotation(0)
-        glInterface.start()
-        uvcCamera.setPreviewTexture(glInterface.surfaceTexture)
-        uvcCamera.startPreview()
-        if (videoEncoder.inputSurface != null) {
-            glInterface.addMediaCodecSurface(videoEncoder.inputSurface)
+    private fun startEncoders(uvcCamera: UVCCamera?) {
+        if (videoEnabled && uvcCamera != null) {
+            videoEncoder.start()
+            glInterface.stop()
+            glInterface.setEncoderSize(videoEncoder.width, videoEncoder.height)
+            glInterface.setRotation(0)
+            glInterface.start()
+            uvcCamera.setPreviewTexture(glInterface.surfaceTexture)
+            uvcCamera.startPreview()
+            if (videoEncoder.inputSurface != null) {
+                glInterface.addMediaCodecSurface(videoEncoder.inputSurface)
+            }
+            isPreview = true
         }
-        isPreview = true
+        if (audioEnabled) {
+            audioEncoder.start()
+            microphoneManager.start()
+        }
     }
 
     private fun resetVideoEncoder() {
@@ -264,7 +270,7 @@ abstract class StreamManager(openGlView: OpenGlView) {
         glInterface.addMediaCodecSurface(videoEncoder.inputSurface)
     }
 
-    fun stopStream(uvcCamera: UVCCamera) {
+    fun stopStream(uvcCamera: UVCCamera?) {
         if (isStreaming) {
             isStreaming = false
             stopStreamRtp()
@@ -272,10 +278,9 @@ abstract class StreamManager(openGlView: OpenGlView) {
         glInterface.removeMediaCodecSurface()
         if (glInterface is OffScreenGlThread) {
             glInterface.stop()
-            uvcCamera.stopPreview()
+            uvcCamera?.stopPreview()
         }
         videoEncoder.stop()
         audioEncoder.stop()
-
     }
 }

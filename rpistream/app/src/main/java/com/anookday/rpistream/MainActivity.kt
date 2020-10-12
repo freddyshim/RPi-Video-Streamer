@@ -1,8 +1,10 @@
 package com.anookday.rpistream
 
+import android.Manifest
 import android.animation.ObjectAnimator
 import android.app.PendingIntent
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.media.AudioFormat
 import android.media.AudioRecord
@@ -20,6 +22,7 @@ import android.view.SurfaceHolder
 import android.view.View
 import android.view.animation.OvershootInterpolator
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.constraintlayout.widget.ConstraintSet
@@ -37,6 +40,7 @@ import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.fab_toggle_on.*
 import kotlinx.android.synthetic.main.nav_header.*
 import kotlinx.coroutines.launch
+import net.openid.appauth.AuthState
 import timber.log.Timber
 
 const val RC_AUTH = 100
@@ -177,6 +181,18 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
     }
 
     /**
+     * Record audio request permission launcher
+     */
+    private val audioRequestPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
+            if (isGranted) {
+                viewModel.toggleAudio()
+            } else {
+                Toast.makeText(this, "Record audio permission denied", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+    /**
      * UVCCamera onClickListener object
      */
     private var uvcCameraOnClickListener = View.OnClickListener {
@@ -193,13 +209,25 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
      * Audio onClickListener object
      */
     private var audioOnClickListener = View.OnClickListener {
+        when {
+            ContextCompat.checkSelfPermission(
+                this@MainActivity,
+                Manifest.permission.RECORD_AUDIO
+            ) == PackageManager.PERMISSION_GRANTED -> {
+                viewModel.toggleAudio()
+            }
+            else -> {
+                audioRequestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            }
+        }
+
         viewModel.audioConfig.value?.let { config ->
             val recorder = AudioRecord(
                 MediaRecorder.AudioSource.MIC,
                 config.sampleRate,
                 if (config.stereo) AudioFormat.CHANNEL_IN_STEREO else AudioFormat.CHANNEL_IN_MONO,
                 AudioFormat.ENCODING_PCM_16BIT,
-                128*1024
+                128 * 1024
             )
             if (recorder.state == AudioRecord.STATE_INITIALIZED) {
                 Timber.i("AudioRecord initialized")
@@ -273,12 +301,16 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
      */
     private fun setObservers() {
         viewModel.user.observe(this, Observer { user ->
-            if (user != null) {
-                isLoggedIn = true
-                user_id.text = user.displayName
-                Glide.with(this).load(user.profileImage).into(user_icon)
-                acc_drawer.menu.findItem(R.id.action_login).isVisible = false
-                acc_drawer.menu.findItem(R.id.action_logout).isVisible = true
+            if (user != null)  {
+                if (AuthState.jsonDeserialize(user.authStateJson).needsTokenRefresh) {
+                    viewModel.logout()
+                } else {
+                    isLoggedIn = true
+                    user_id.text = user.displayName
+                    Glide.with(this).load(user.profileImage).into(user_icon)
+                    acc_drawer.menu.findItem(R.id.action_login).isVisible = false
+                    acc_drawer.menu.findItem(R.id.action_logout).isVisible = true
+                }
             } else {
                 isLoggedIn = false
                 user_id.text = getString(R.string.no_user_text)
@@ -341,6 +373,22 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
                     ContextCompat.getColor(this@MainActivity, R.color.colorPrimary)
                 )
                 video_fab_text.text = getText(R.string.video_off_text)
+            }
+        })
+
+        viewModel.audioStatus.observe(this, Observer { status ->
+            if (status != null) {
+                audio_fab.setImageResource(R.drawable.ic_baseline_mic_24)
+                audio_fab.backgroundTintList = ColorStateList.valueOf(
+                    ContextCompat.getColor(this@MainActivity, R.color.colorAccent)
+                )
+                audio_fab_text.text = status
+            } else {
+                audio_fab.setImageResource(R.drawable.ic_baseline_mic_off_24)
+                audio_fab.backgroundTintList = ColorStateList.valueOf(
+                    ContextCompat.getColor(this@MainActivity, R.color.colorPrimary)
+                )
+                audio_fab_text.text = getString(R.string.audio_off_text)
             }
         })
     }
