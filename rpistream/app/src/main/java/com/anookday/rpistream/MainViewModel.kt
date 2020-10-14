@@ -4,23 +4,21 @@ import android.app.Application
 import android.content.Context
 import android.content.Intent
 import android.hardware.usb.UsbDevice
+import android.hardware.usb.UsbManager
+import android.widget.Toast
 import androidx.lifecycle.*
 import com.anookday.rpistream.config.AudioConfig
 import com.anookday.rpistream.config.VideoConfig
 import com.anookday.rpistream.database.User
 import com.anookday.rpistream.database.getDatabase
-import com.anookday.rpistream.oauth.KEY_STATE
-import com.anookday.rpistream.oauth.STORE_NAME
 import com.anookday.rpistream.oauth.TwitchManager
-import com.anookday.rpistream.stream.RtmpStreamManager
-import com.anookday.rpistream.stream.StreamManager
+import com.anookday.rpistream.stream.StreamService
 import com.pedro.rtplibrary.view.OpenGlView
+import com.serenegiant.usb.CameraDialog
 import com.serenegiant.usb.USBMonitor
 import com.serenegiant.usb.UVCCamera
 import kotlinx.coroutines.*
-import net.openid.appauth.AuthState
 import net.ossrs.rtmp.ConnectCheckerRtmp
-import org.json.JSONException
 import timber.log.Timber
 
 enum class UsbConnectStatus { ATTACHED, DETACHED }
@@ -30,12 +28,12 @@ enum class RtmpAuthStatus { SUCCESS, FAIL }
 /**
  * ViewModel for [MainActivity].
  */
-class MainViewModel(application: Application) : AndroidViewModel(application) {
+class MainViewModel(val app: Application) : AndroidViewModel(app) {
     // user database
-    private val database = getDatabase(application)
+    private val database = getDatabase(app)
 
     // twitch oauth manager
-    private val twitchManager = TwitchManager(application.applicationContext, database)
+    private val twitchManager = TwitchManager(app.applicationContext, database)
 
     // user object
     val user: LiveData<User?> = database.userDao.getUser()
@@ -54,16 +52,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _usbMonitor = MutableLiveData<USBMonitor>()
     val usbMonitor: LiveData<USBMonitor>
         get() = _usbMonitor
-
-    // object used to manage stream activity
-    private val _streamManager = MutableLiveData<StreamManager>()
-    val streamManager: LiveData<StreamManager>
-        get() = _streamManager
-
-    // UVC camera object
-    private val _uvcCamera = MutableLiveData<UVCCamera>()
-    val uvcCamera: LiveData<UVCCamera>
-        get() = _uvcCamera
 
     // USB device status
     private val _usbStatus = MutableLiveData<UsbConnectStatus>()
@@ -100,7 +88,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _videoConfig.value = VideoConfig()
         _audioConfig.value = AudioConfig()
         _usbMonitor.value = USBMonitor(context, onDeviceConnectListener)
-        _streamManager.value = RtmpStreamManager(cameraView, connectCheckerRtmp)
+        StreamService.init(cameraView, connectCheckerRtmp)
     }
 
     fun getAuthorizationIntent(): Intent? {
@@ -138,11 +126,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      */
     fun startPreview(width: Int?, height: Int?) {
         viewModelScope.launch {
-            _uvcCamera.value?.let { camera ->
-                _streamManager.value?.let { stream ->
-                    if (!stream.isPreview) stream.startPreview(camera, width, height)
-                }
-            }
+            StreamService.startPreview(width, height)
         }
     }
 
@@ -151,27 +135,46 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      */
     fun stopPreview() {
         viewModelScope.launch {
-            _uvcCamera.value?.let { camera ->
-                _streamManager.value?.let { stream ->
-                    if (stream.isPreview) stream.stopPreview(camera)
-
-                }
-            }
+            StreamService.stopPreview()
         }
     }
 
     /**
      * Stop the current stream and preview. Destroy camera instance if initialized.
      */
-    fun destroyCamera() {
+    fun disableCamera() {
         viewModelScope.launch {
-            _uvcCamera.value?.let { camera ->
-                _streamManager.value?.let { stream ->
-                    if (stream.isStreaming) stream.stopStream(camera)
-                    if (stream.isPreview) stream.stopPreview(camera)
-                }
-                camera.destroy()
+            StreamService.disableCamera()
+            _videoStatus.value = null
+        }
+    }
+
+    /**
+     * Connect to UVCCamera if video is disabled. Otherwise, disable video.
+     */
+    fun toggleVideo() {
+        if (videoStatus.value == null) {
+            val usbManager = app.getSystemService(Context.USB_SERVICE) as UsbManager
+            val deviceList = usbManager.deviceList
+            if (deviceList.isNotEmpty()) {
+                val device: UsbDevice = deviceList.values.elementAt(0)
+                usbMonitor.value?.requestPermission(device)
             }
+        } else {
+            disableCamera()
+        }
+    }
+
+    /**
+     * Enable or disable audio recording.
+     */
+    fun toggleAudio() {
+        if (_audioStatus.value == null) {
+            _audioStatus.value = app.getString(R.string.audio_on_text)
+            StreamService.enableAudio()
+        } else {
+            _audioStatus.value = null
+            StreamService.disableAudio()
         }
     }
 
@@ -190,19 +193,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 user.value?.let {
                     val streamEndpoint: String? = twitchManager.getIngestEndpoint(it.idToken, it.accessToken)
                     if (streamEndpoint != null) {
-                        _uvcCamera.value?.let { camera ->
-                            _streamManager.value?.let { stream ->
-                                // start stream
-                                if (!stream.isStreaming) {
-                                    if (stream.prepareVideo(camera, _videoConfig.value) && stream.prepareAudio(_audioConfig.value)) {
-                                        stream.startStream(camera, streamEndpoint)
-                                    }
-                                }
-                                // stop stream
-                                else {
-                                    stream.stopStream(camera)
-                                }
+                        val intent = Intent(app.applicationContext, StreamService::class.java)
+                        when {
+                            StreamService.isStreaming -> {
+                                app.stopService(intent)
+                                _connectStatus.postValue(RtmpConnectStatus.DISCONNECT)
                             }
+                            StreamService.prepareStream(videoConfig.value, audioConfig.value) -> {
+                                intent.putExtra("endpoint", streamEndpoint)
+                                app.startService(intent)
+                                _connectStatus.postValue(RtmpConnectStatus.SUCCESS)
+                            }
+                            else -> _connectStatus.postValue(RtmpConnectStatus.FAIL)
                         }
                     }
                 }
@@ -221,25 +223,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         ) {
             Timber.v("RPISTREAM onDeviceConnectListener: Device connected")
             viewModelScope.launch {
-                _uvcCamera.value = UVCCamera()
-                uvcCamera.value?.let { camera ->
-                    camera.open(ctrlBlock)
-                    Timber.i("RPISTREAM onDeviceConnectListener: Supported size: ${uvcCamera.value?.supportedSize}")
-                    try {
-                        videoConfig.value?.let { config ->
-                            camera.setPreviewSize(
-                                config.width,
-                                config.height,
-                                UVCCamera.FRAME_FORMAT_MJPEG
-                            )
-                            streamManager.value?.startPreview(camera, config.width, config.height)
-                            _videoStatus.value = camera.deviceName
-                        }
-                    } catch (e: IllegalArgumentException) {
-                        Timber.i("RPISTREAM onDeviceConnectListener: Incorrect preview configuration passed")
-                        camera.destroy()
-                        _videoStatus.value = null
-                    }
+                try {
+                    _videoStatus.postValue(StreamService.enableCamera(ctrlBlock, videoConfig.value))
+                } catch (e: IllegalArgumentException) {
+                    disableCamera()
                 }
             }
         }
@@ -256,8 +243,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         override fun onDisconnect(device: UsbDevice?, ctrlBlock: USBMonitor.UsbControlBlock?) {
             Timber.v("RPISTREAM onDeviceConnectListener: Device disconnected")
             viewModelScope.launch {
-                uvcCamera.value?.close()
-                _videoStatus.value = null
+                StreamService.disableCamera()
+                _videoStatus.postValue(null)
             }
         }
 
@@ -278,9 +265,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         override fun onConnectionFailedRtmp(reason: String) {
             _connectStatus.postValue(RtmpConnectStatus.FAIL)
-            uvcCamera.value?.let {
-                streamManager.value?.stopStream(it)
-            }
+            StreamService.stopStream()
         }
 
         override fun onAuthSuccessRtmp() {

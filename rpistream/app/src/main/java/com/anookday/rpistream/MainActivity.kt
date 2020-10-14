@@ -1,18 +1,18 @@
 package com.anookday.rpistream
 
+import android.Manifest
 import android.animation.ObjectAnimator
-import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.res.ColorStateList
+import android.hardware.usb.UsbDevice
+import android.hardware.usb.UsbManager
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
-import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
-import android.text.Editable
-import android.text.TextUtils
-import android.text.TextWatcher
 import android.transition.ChangeBounds
 import android.transition.TransitionManager
 import android.view.MenuItem
@@ -20,6 +20,7 @@ import android.view.SurfaceHolder
 import android.view.View
 import android.view.animation.OvershootInterpolator
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.constraintlayout.widget.ConstraintSet
@@ -28,15 +29,15 @@ import androidx.core.view.GravityCompat
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.lifecycleScope
 import com.anookday.rpistream.databinding.ActivityMainBinding
+import com.anookday.rpistream.stream.StreamService
 import com.bumptech.glide.Glide
 import com.serenegiant.usb.CameraDialog
 import com.serenegiant.usb.USBMonitor
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.fab_toggle_on.*
 import kotlinx.android.synthetic.main.nav_header.*
-import kotlinx.coroutines.launch
+import net.openid.appauth.AuthState
 import timber.log.Timber
 
 const val RC_AUTH = 100
@@ -100,7 +101,7 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
         mTransition.interpolator = OvershootInterpolator(1.0f)
 
         // set click listeners
-        video_fab.setOnClickListener(uvcCameraOnClickListener)
+        video_fab.setOnClickListener(videoOnClickListener)
         audio_fab.setOnClickListener(audioOnClickListener)
         stream_fab.setOnClickListener(streamOnClickListener)
         menu_fab.setOnClickListener(menuFabOnClickListener)
@@ -136,15 +137,21 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
 
     override fun onDestroy() {
         Timber.v("RPISTREAM lifecycle: onDestroy called")
+        if (StreamService.isStreaming) {
+            application.stopService(Intent(applicationContext, StreamService::class.java))
+        }
         viewModel.unregisterUsbMonitor()
-        viewModel.destroyCamera()
+        viewModel.disableCamera()
         viewModel.destroyUsbMonitor()
         super.onDestroy()
     }
 
     override fun onBackPressed() {
         if (isBackPressedOnce) {
-            viewModel.destroyCamera()
+            if (StreamService.isStreaming) {
+                application.stopService(Intent(applicationContext, StreamService::class.java))
+            }
+            viewModel.disableCamera()
             viewModel.destroyUsbMonitor()
             super.onBackPressed()
             return
@@ -177,34 +184,34 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
     }
 
     /**
-     * UVCCamera onClickListener object
+     * Record audio request permission launcher
      */
-    private var uvcCameraOnClickListener = View.OnClickListener {
-        viewModel.streamManager.value?.let { stream ->
-            if (!stream.isStreaming && !stream.isPreview) {
-                CameraDialog.showDialog(this)
+    private val audioRequestPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
+            if (isGranted) {
+                viewModel.toggleAudio()
             } else {
-                viewModel.destroyCamera()
+                showMessage("Record audio permission denied")
             }
         }
+
+    /**
+     * Video onClickListener object
+     */
+    private var videoOnClickListener = View.OnClickListener {
+        viewModel.toggleVideo()
     }
 
     /**
      * Audio onClickListener object
      */
     private var audioOnClickListener = View.OnClickListener {
-        viewModel.audioConfig.value?.let { config ->
-            val recorder = AudioRecord(
-                MediaRecorder.AudioSource.MIC,
-                config.sampleRate,
-                if (config.stereo) AudioFormat.CHANNEL_IN_STEREO else AudioFormat.CHANNEL_IN_MONO,
-                AudioFormat.ENCODING_PCM_16BIT,
-                128*1024
-            )
-            if (recorder.state == AudioRecord.STATE_INITIALIZED) {
-                Timber.i("AudioRecord initialized")
-            } else {
-                Timber.i("AudioRecord not initialized")
+        when (ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.RECORD_AUDIO)) {
+            PackageManager.PERMISSION_GRANTED -> {
+                viewModel.toggleAudio()
+            }
+            else -> {
+                audioRequestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
             }
         }
     }
@@ -216,7 +223,7 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
         if (isLoggedIn) {
             viewModel.toggleStream()
         } else {
-            Toast.makeText(this, "Please log in to start streaming.", Toast.LENGTH_SHORT).show()
+            showMessage("Please log in to start streaming.")
         }
     }
 
@@ -248,9 +255,11 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
         }
 
         override fun surfaceChanged(holder: SurfaceHolder?, format: Int, width: Int, height: Int) {
-            if (width == 0 || height == 0) return
             Timber.v("RPISTREAM surfaceViewCallback: Surface changed")
-            viewModel.startPreview(width, height)
+            if (width == 0 || height == 0) return
+            if (StreamService.isPreview) {
+                viewModel.startPreview(width, height)
+            }
         }
 
         override fun surfaceDestroyed(holder: SurfaceHolder?) {
@@ -272,12 +281,16 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
      */
     private fun setObservers() {
         viewModel.user.observe(this, Observer { user ->
-            if (user != null) {
-                isLoggedIn = true
-                user_id.text = user.displayName
-                Glide.with(this).load(user.profileImage).into(user_icon)
-                acc_drawer.menu.findItem(R.id.action_login).isVisible = false
-                acc_drawer.menu.findItem(R.id.action_logout).isVisible = true
+            if (user != null)  {
+                if (AuthState.jsonDeserialize(user.authStateJson).needsTokenRefresh) {
+                    viewModel.logout()
+                } else {
+                    isLoggedIn = true
+                    user_id.text = user.displayName
+                    Glide.with(this).load(user.profileImage).into(user_icon)
+                    acc_drawer.menu.findItem(R.id.action_login).isVisible = false
+                    acc_drawer.menu.findItem(R.id.action_logout).isVisible = true
+                }
             } else {
                 isLoggedIn = false
                 user_id.text = getString(R.string.no_user_text)
@@ -340,6 +353,22 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
                     ContextCompat.getColor(this@MainActivity, R.color.colorPrimary)
                 )
                 video_fab_text.text = getText(R.string.video_off_text)
+            }
+        })
+
+        viewModel.audioStatus.observe(this, Observer { status ->
+            if (status != null) {
+                audio_fab.setImageResource(R.drawable.ic_baseline_mic_24)
+                audio_fab.backgroundTintList = ColorStateList.valueOf(
+                    ContextCompat.getColor(this@MainActivity, R.color.colorAccent)
+                )
+                audio_fab_text.text = status
+            } else {
+                audio_fab.setImageResource(R.drawable.ic_baseline_mic_off_24)
+                audio_fab.backgroundTintList = ColorStateList.valueOf(
+                    ContextCompat.getColor(this@MainActivity, R.color.colorPrimary)
+                )
+                audio_fab_text.text = getString(R.string.audio_off_text)
             }
         })
     }
