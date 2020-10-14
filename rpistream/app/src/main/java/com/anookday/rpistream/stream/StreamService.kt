@@ -120,20 +120,18 @@ class StreamService() : Service() {
          * @param height        Height of preview frame in px.
          */
         fun startPreview(width: Int?, height: Int?) {
-            if (!isStreaming && !isPreview && glInterface !is OffScreenGlThread) {
-                if (width != null) previewWidth = width
-                if (height != null) previewHeight = height
-                glInterface?.let { intf ->
-                    intf.setEncoderSize(previewWidth, previewHeight)
-                    intf.setRotation(0)
-                    intf.start()
-                    camera?.let { cam ->
-                        cam.setPreviewTexture(intf.surfaceTexture)
-                        cam.startPreview()
-                    }
-                    isPreview = true
-                    Timber.v("RPISTREAM preview enabled")
+            if (width != null) previewWidth = width
+            if (height != null) previewHeight = height
+            glInterface?.let { intf ->
+                intf.setEncoderSize(previewWidth, previewHeight)
+                intf.setRotation(0)
+                intf.start()
+                camera?.let { cam ->
+                    cam.setPreviewTexture(intf.surfaceTexture)
+                    cam.startPreview()
                 }
+                isPreview = true
+                Timber.v("RPISTREAM preview enabled")
             }
         }
 
@@ -141,12 +139,10 @@ class StreamService() : Service() {
          * Stop camera preview if preview is currently enabled.
          */
         fun stopPreview() {
-            if (!isStreaming && isPreview && glInterface !is OffScreenGlThread) {
-                Timber.v("RPISTREAM preview disabled")
-                glInterface?.stop()
-                camera?.stopPreview()
-                isPreview = false
-            }
+            Timber.v("RPISTREAM preview disabled")
+            glInterface?.stop()
+            camera?.stopPreview()
+            isPreview = false
         }
 
         /**
@@ -167,17 +163,9 @@ class StreamService() : Service() {
         }
 
         /**
-         * Disable video input for streaming.
-         */
-        fun disableCamera() {
-            camera?.close()
-            videoEnabled = false
-        }
-
-        /**
          * Stop the current stream and preview. Destroy camera instance if initialized.
          */
-        fun destroyCamera() {
+        fun disableCamera() {
             if (isStreaming) stopStream()
             if (isPreview) stopPreview()
             camera?.destroy()
@@ -385,7 +373,8 @@ class StreamService() : Service() {
         Timber.v("Stream service created")
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(channelId, channelId, NotificationManager.IMPORTANCE_HIGH)
+            val channel =
+                NotificationChannel(channelId, channelId, NotificationManager.IMPORTANCE_HIGH)
             notificationManager?.createNotificationChannel(channel)
         }
         keepAliveTrick()

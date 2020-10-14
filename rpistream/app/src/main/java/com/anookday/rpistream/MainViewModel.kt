@@ -142,9 +142,9 @@ class MainViewModel(val app: Application) : AndroidViewModel(app) {
     /**
      * Stop the current stream and preview. Destroy camera instance if initialized.
      */
-    fun destroyCamera() {
+    fun disableCamera() {
         viewModelScope.launch {
-            StreamService.destroyCamera()
+            StreamService.disableCamera()
             _videoStatus.value = null
         }
     }
@@ -161,7 +161,7 @@ class MainViewModel(val app: Application) : AndroidViewModel(app) {
                 usbMonitor.value?.requestPermission(device)
             }
         } else {
-            destroyCamera()
+            disableCamera()
         }
     }
 
@@ -226,7 +226,7 @@ class MainViewModel(val app: Application) : AndroidViewModel(app) {
                 try {
                     _videoStatus.postValue(StreamService.enableCamera(ctrlBlock, videoConfig.value))
                 } catch (e: IllegalArgumentException) {
-                    destroyCamera()
+                    disableCamera()
                 }
             }
         }

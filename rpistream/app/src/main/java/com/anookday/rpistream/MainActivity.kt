@@ -30,6 +30,7 @@ import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.anookday.rpistream.databinding.ActivityMainBinding
+import com.anookday.rpistream.stream.StreamService
 import com.bumptech.glide.Glide
 import com.serenegiant.usb.CameraDialog
 import com.serenegiant.usb.USBMonitor
@@ -136,15 +137,21 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
 
     override fun onDestroy() {
         Timber.v("RPISTREAM lifecycle: onDestroy called")
+        if (StreamService.isStreaming) {
+            application.stopService(Intent(applicationContext, StreamService::class.java))
+        }
         viewModel.unregisterUsbMonitor()
-        viewModel.destroyCamera()
+        viewModel.disableCamera()
         viewModel.destroyUsbMonitor()
         super.onDestroy()
     }
 
     override fun onBackPressed() {
         if (isBackPressedOnce) {
-            viewModel.destroyCamera()
+            if (StreamService.isStreaming) {
+                application.stopService(Intent(applicationContext, StreamService::class.java))
+            }
+            viewModel.disableCamera()
             viewModel.destroyUsbMonitor()
             super.onBackPressed()
             return
@@ -250,7 +257,9 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
         override fun surfaceChanged(holder: SurfaceHolder?, format: Int, width: Int, height: Int) {
             Timber.v("RPISTREAM surfaceViewCallback: Surface changed")
             if (width == 0 || height == 0) return
-//            viewModel.startPreview(width, height)
+            if (StreamService.isPreview) {
+                viewModel.startPreview(width, height)
+            }
         }
 
         override fun surfaceDestroyed(holder: SurfaceHolder?) {
