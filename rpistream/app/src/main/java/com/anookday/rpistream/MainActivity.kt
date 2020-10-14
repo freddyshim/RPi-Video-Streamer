@@ -2,19 +2,17 @@ package com.anookday.rpistream
 
 import android.Manifest
 import android.animation.ObjectAnimator
-import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
+import android.hardware.usb.UsbDevice
+import android.hardware.usb.UsbManager
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
-import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
-import android.text.Editable
-import android.text.TextUtils
-import android.text.TextWatcher
 import android.transition.ChangeBounds
 import android.transition.TransitionManager
 import android.view.MenuItem
@@ -31,7 +29,6 @@ import androidx.core.view.GravityCompat
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.lifecycleScope
 import com.anookday.rpistream.databinding.ActivityMainBinding
 import com.bumptech.glide.Glide
 import com.serenegiant.usb.CameraDialog
@@ -39,7 +36,6 @@ import com.serenegiant.usb.USBMonitor
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.fab_toggle_on.*
 import kotlinx.android.synthetic.main.nav_header.*
-import kotlinx.coroutines.launch
 import net.openid.appauth.AuthState
 import timber.log.Timber
 
@@ -104,7 +100,7 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
         mTransition.interpolator = OvershootInterpolator(1.0f)
 
         // set click listeners
-        video_fab.setOnClickListener(uvcCameraOnClickListener)
+        video_fab.setOnClickListener(videoOnClickListener)
         audio_fab.setOnClickListener(audioOnClickListener)
         stream_fab.setOnClickListener(streamOnClickListener)
         menu_fab.setOnClickListener(menuFabOnClickListener)
@@ -188,51 +184,27 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
             if (isGranted) {
                 viewModel.toggleAudio()
             } else {
-                Toast.makeText(this, "Record audio permission denied", Toast.LENGTH_SHORT).show()
+                showMessage("Record audio permission denied")
             }
         }
 
     /**
-     * UVCCamera onClickListener object
+     * Video onClickListener object
      */
-    private var uvcCameraOnClickListener = View.OnClickListener {
-        viewModel.streamManager.value?.let { stream ->
-            if (!stream.isStreaming && !stream.isPreview) {
-                CameraDialog.showDialog(this)
-            } else {
-                viewModel.destroyCamera()
-            }
-        }
+    private var videoOnClickListener = View.OnClickListener {
+        viewModel.toggleVideo()
     }
 
     /**
      * Audio onClickListener object
      */
     private var audioOnClickListener = View.OnClickListener {
-        when {
-            ContextCompat.checkSelfPermission(
-                this@MainActivity,
-                Manifest.permission.RECORD_AUDIO
-            ) == PackageManager.PERMISSION_GRANTED -> {
+        when (ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.RECORD_AUDIO)) {
+            PackageManager.PERMISSION_GRANTED -> {
                 viewModel.toggleAudio()
             }
             else -> {
                 audioRequestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-            }
-        }
-
-        viewModel.audioConfig.value?.let { config ->
-            val recorder = AudioRecord(
-                MediaRecorder.AudioSource.MIC,
-                config.sampleRate,
-                if (config.stereo) AudioFormat.CHANNEL_IN_STEREO else AudioFormat.CHANNEL_IN_MONO,
-                AudioFormat.ENCODING_PCM_16BIT,
-                128 * 1024
-            )
-            if (recorder.state == AudioRecord.STATE_INITIALIZED) {
-                Timber.i("AudioRecord initialized")
-            } else {
-                Timber.i("AudioRecord not initialized")
             }
         }
     }
@@ -244,7 +216,7 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
         if (isLoggedIn) {
             viewModel.toggleStream()
         } else {
-            Toast.makeText(this, "Please log in to start streaming.", Toast.LENGTH_SHORT).show()
+            showMessage("Please log in to start streaming.")
         }
     }
 
@@ -278,12 +250,11 @@ class MainActivity : AppCompatActivity(), CameraDialog.CameraDialogParent {
         override fun surfaceChanged(holder: SurfaceHolder?, format: Int, width: Int, height: Int) {
             Timber.v("RPISTREAM surfaceViewCallback: Surface changed")
             if (width == 0 || height == 0) return
-            viewModel.startPreview(width, height)
+//            viewModel.startPreview(width, height)
         }
 
         override fun surfaceDestroyed(holder: SurfaceHolder?) {
             Timber.v("RPISTREAM surfaceViewCallback: Surface destroyed")
-            viewModel.initBackgroundProcess()
         }
     }
 
