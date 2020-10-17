@@ -13,11 +13,13 @@ import com.anookday.rpistream.database.User
 import com.anookday.rpistream.database.getDatabase
 import com.anookday.rpistream.oauth.TwitchManager
 import com.anookday.rpistream.stream.StreamService
+import com.pedro.rtplibrary.util.BitrateAdapter
 import com.pedro.rtplibrary.view.OpenGlView
 import com.serenegiant.usb.CameraDialog
 import com.serenegiant.usb.USBMonitor
 import com.serenegiant.usb.UVCCamera
 import kotlinx.coroutines.*
+import net.ossrs.rtmp.BitrateManager
 import net.ossrs.rtmp.ConnectCheckerRtmp
 import timber.log.Timber
 
@@ -259,7 +261,13 @@ class MainViewModel(val app: Application) : AndroidViewModel(app) {
      * RTMP connection notification object
      */
     private var connectCheckerRtmp = object : ConnectCheckerRtmp {
+        private var bitrateAdapter: BitrateAdapter? = null
+
         override fun onConnectionSuccessRtmp() {
+            bitrateAdapter = BitrateAdapter(BitrateAdapter.Listener { bitrate ->
+                StreamService.videoBitrate = bitrate
+            })
+            bitrateAdapter?.setMaxBitrate(StreamService.videoBitrate)
             _connectStatus.postValue(RtmpConnectStatus.SUCCESS)
         }
 
@@ -273,7 +281,7 @@ class MainViewModel(val app: Application) : AndroidViewModel(app) {
         }
 
         override fun onNewBitrateRtmp(bitrate: Long) {
-
+            bitrateAdapter?.adaptBitrate(bitrate)
         }
 
         override fun onAuthErrorRtmp() {
