@@ -3,9 +3,7 @@ package com.anookday.rpistream.oauth
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import androidx.appcompat.app.AppCompatActivity
 import com.anookday.rpistream.R
-import com.anookday.rpistream.RC_AUTH
 import com.anookday.rpistream.database.User
 import com.anookday.rpistream.database.UserDatabase
 import com.anookday.rpistream.network.*
