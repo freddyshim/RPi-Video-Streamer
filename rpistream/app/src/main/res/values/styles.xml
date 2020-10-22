@@ -9,4 +9,9 @@
         <item name="fontFamily">@font/roboto_light</item>
     </style>
 
+    <style name="AlertDialogStyle" parent="Theme.MaterialComponents.Light.Dialog.Alert">
+        <item name="android:colorAccent">@color/colorAccent</item>
+        <item name="android:textColor">@color/colorTextPrimary</item>
+        <item name="android:textColorPrimary">@color/colorTextPrimary</item>
+    </style>
 </resources>

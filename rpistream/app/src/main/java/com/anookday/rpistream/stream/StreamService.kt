@@ -1,6 +1,5 @@
 package com.anookday.rpistream.stream
 
-import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
@@ -10,9 +9,7 @@ import android.graphics.ImageFormat
 import android.media.MediaCodec
 import android.media.MediaFormat
 import android.media.MediaRecorder
-import android.os.Build
 import android.os.IBinder
-import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.anookday.rpistream.R
 import com.anookday.rpistream.config.AudioConfig
@@ -20,21 +17,17 @@ import com.anookday.rpistream.config.VideoConfig
 import com.pedro.encoder.Frame
 import com.pedro.encoder.audio.AudioEncoder
 import com.pedro.encoder.audio.GetAacData
-import com.pedro.encoder.input.audio.GetMicrophoneData
 import com.pedro.encoder.input.audio.MicrophoneManager
 import com.pedro.encoder.video.FormatVideoEncoder
 import com.pedro.encoder.video.GetVideoData
 import com.pedro.encoder.video.VideoEncoder
 import com.pedro.rtplibrary.view.GlInterface
-import com.pedro.rtplibrary.view.OffScreenGlThread
 import com.pedro.rtplibrary.view.OpenGlView
-import com.serenegiant.usb.IFrameCallback
 import com.serenegiant.usb.USBMonitor
 import com.serenegiant.usb.UVCCamera
 import net.ossrs.rtmp.ConnectCheckerRtmp
 import net.ossrs.rtmp.SrsFlvMuxer
 import timber.log.Timber
-import java.lang.IllegalArgumentException
 import java.nio.ByteBuffer
 
 const val STREAM_SERVICE_NOTIFICATION_ID = 123456

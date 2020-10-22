@@ -1,6 +1,5 @@
 package com.anookday.rpistream.stream
 
-import android.app.NotificationManager
 import android.os.CountDownTimer
 
 private const val INTERVAL_MS: Long = 1000
