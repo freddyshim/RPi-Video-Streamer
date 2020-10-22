@@ -9,4 +9,5 @@
     <string name="action_login">Log In to Twitch</string>
     <string name="user_picture_description">User profile picture</string>
     <string name="no_user_text">No User</string>
+    <string name="landing_caption">Project Pigeon</string>
 </resources>

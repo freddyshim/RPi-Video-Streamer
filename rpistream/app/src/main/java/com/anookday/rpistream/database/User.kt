@@ -2,7 +2,6 @@ package com.anookday.rpistream.database
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import net.openid.appauth.AuthState
 
 @Entity
 data class User(

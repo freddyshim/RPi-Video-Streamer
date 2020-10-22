@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.Intent
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
-import android.widget.Toast
 import androidx.lifecycle.*
 import com.anookday.rpistream.config.AudioConfig
 import com.anookday.rpistream.config.VideoConfig
@@ -13,10 +12,9 @@ import com.anookday.rpistream.database.User
 import com.anookday.rpistream.database.getDatabase
 import com.anookday.rpistream.oauth.TwitchManager
 import com.anookday.rpistream.stream.StreamService
+import com.pedro.rtplibrary.util.BitrateAdapter
 import com.pedro.rtplibrary.view.OpenGlView
-import com.serenegiant.usb.CameraDialog
 import com.serenegiant.usb.USBMonitor
-import com.serenegiant.usb.UVCCamera
 import kotlinx.coroutines.*
 import net.ossrs.rtmp.ConnectCheckerRtmp
 import timber.log.Timber
@@ -24,6 +22,7 @@ import timber.log.Timber
 enum class UsbConnectStatus { ATTACHED, DETACHED }
 enum class RtmpConnectStatus { SUCCESS, FAIL, DISCONNECT }
 enum class RtmpAuthStatus { SUCCESS, FAIL }
+enum class CurrentFragmentName { LANDING, LOGIN, STREAM }
 
 /**
  * ViewModel for [MainActivity].
@@ -31,6 +30,10 @@ enum class RtmpAuthStatus { SUCCESS, FAIL }
 class MainViewModel(val app: Application) : AndroidViewModel(app) {
     // user database
     private val database = getDatabase(app)
+
+    private val _currentFragment = MutableLiveData<CurrentFragmentName>()
+    val currentFragment: LiveData<CurrentFragmentName>
+        get() = _currentFragment
 
     // twitch oauth manager
     private val twitchManager = TwitchManager(app.applicationContext, database)
@@ -69,13 +72,13 @@ class MainViewModel(val app: Application) : AndroidViewModel(app) {
         get() = _authStatus
 
     // video connection status
-    private val _videoStatus = MutableLiveData<String>()
-    val videoStatus: LiveData<String>
+    private val _videoStatus = MutableLiveData<String?>()
+    val videoStatus: LiveData<String?>
         get() = _videoStatus
 
     // audio connection status
-    private val _audioStatus = MutableLiveData<String>()
-    val audioStatus: LiveData<String>
+    private val _audioStatus = MutableLiveData<String?>()
+    val audioStatus: LiveData<String?>
         get() = _audioStatus
 
     /**
@@ -89,6 +92,11 @@ class MainViewModel(val app: Application) : AndroidViewModel(app) {
         _audioConfig.value = AudioConfig()
         _usbMonitor.value = USBMonitor(context, onDeviceConnectListener)
         StreamService.init(cameraView, connectCheckerRtmp)
+        registerUsbMonitor()
+    }
+
+    fun setCurrentFragment(fragmentName: CurrentFragmentName) {
+        _currentFragment.value = fragmentName
     }
 
     fun getAuthorizationIntent(): Intent? {
@@ -259,7 +267,13 @@ class MainViewModel(val app: Application) : AndroidViewModel(app) {
      * RTMP connection notification object
      */
     private var connectCheckerRtmp = object : ConnectCheckerRtmp {
+        private var bitrateAdapter: BitrateAdapter? = null
+
         override fun onConnectionSuccessRtmp() {
+            bitrateAdapter = BitrateAdapter(BitrateAdapter.Listener { bitrate ->
+                StreamService.videoBitrate = bitrate
+            })
+            bitrateAdapter?.setMaxBitrate(StreamService.videoBitrate)
             _connectStatus.postValue(RtmpConnectStatus.SUCCESS)
         }
 
@@ -273,7 +287,7 @@ class MainViewModel(val app: Application) : AndroidViewModel(app) {
         }
 
         override fun onNewBitrateRtmp(bitrate: Long) {
-
+            bitrateAdapter?.adaptBitrate(bitrate)
         }
 
         override fun onAuthErrorRtmp() {

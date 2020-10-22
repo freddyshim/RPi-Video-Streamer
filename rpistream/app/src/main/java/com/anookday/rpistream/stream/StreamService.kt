@@ -1,6 +1,5 @@
 package com.anookday.rpistream.stream
 
-import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
@@ -10,31 +9,29 @@ import android.graphics.ImageFormat
 import android.media.MediaCodec
 import android.media.MediaFormat
 import android.media.MediaRecorder
-import android.os.Build
 import android.os.IBinder
-import android.util.Log
 import androidx.core.app.NotificationCompat
+import com.anookday.rpistream.R
 import com.anookday.rpistream.config.AudioConfig
 import com.anookday.rpistream.config.VideoConfig
 import com.pedro.encoder.Frame
 import com.pedro.encoder.audio.AudioEncoder
 import com.pedro.encoder.audio.GetAacData
-import com.pedro.encoder.input.audio.GetMicrophoneData
 import com.pedro.encoder.input.audio.MicrophoneManager
 import com.pedro.encoder.video.FormatVideoEncoder
 import com.pedro.encoder.video.GetVideoData
 import com.pedro.encoder.video.VideoEncoder
 import com.pedro.rtplibrary.view.GlInterface
-import com.pedro.rtplibrary.view.OffScreenGlThread
 import com.pedro.rtplibrary.view.OpenGlView
-import com.serenegiant.usb.IFrameCallback
 import com.serenegiant.usb.USBMonitor
 import com.serenegiant.usb.UVCCamera
 import net.ossrs.rtmp.ConnectCheckerRtmp
 import net.ossrs.rtmp.SrsFlvMuxer
 import timber.log.Timber
-import java.lang.IllegalArgumentException
 import java.nio.ByteBuffer
+
+const val STREAM_SERVICE_NOTIFICATION_ID = 123456
+const val STREAM_SERVICE_NAME = "RPi Streamer"
 
 /**
  * Service that handles streaming video output from UVCCamera and audio output from an audio input
@@ -47,7 +44,7 @@ class StreamService() : Service() {
         private var glInterface: GlInterface? = null
         private var srsFlvMuxer: SrsFlvMuxer? = null
         private var notificationManager: NotificationManager? = null
-        private val channelId = "rpiStreamChannel"
+        private var streamTimer: StreamTimer? = null
         private var videoFormat: MediaFormat? = null
         private var audioFormat: MediaFormat? = null
         private var previewWidth = 720
@@ -56,6 +53,10 @@ class StreamService() : Service() {
         var audioEnabled = false
         var isStreaming = false
         var isPreview = false
+
+        var videoBitrate: Int
+            get() = videoEncoder.bitRate
+            set(bitrate) = videoEncoder.setVideoBitrateOnFly(bitrate)
 
         /**
          * Video encoder class
@@ -365,31 +366,40 @@ class StreamService() : Service() {
                 videoEncoder.stop()
                 audioEncoder.stop()
             }
+            streamTimer?.cancel()
         }
     }
 
     override fun onCreate() {
         super.onCreate()
         Timber.v("Stream service created")
-        notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel =
-                NotificationChannel(channelId, channelId, NotificationManager.IMPORTANCE_HIGH)
-            notificationManager?.createNotificationChannel(channel)
-        }
-        keepAliveTrick()
-    }
 
-    private fun keepAliveTrick() {
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.O) {
-            val notification = NotificationCompat.Builder(this, channelId)
-                .setOngoing(true)
-                .setContentTitle("")
-                .setContentText("").build()
-            startForeground(1, notification)
-        } else {
-            startForeground(1, Notification())
+        notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val channel = NotificationChannel(
+            STREAM_SERVICE_NAME,
+            STREAM_SERVICE_NAME,
+            NotificationManager.IMPORTANCE_LOW
+        )
+        notificationManager?.createNotificationChannel(channel)
+
+        val notificationBuilder = NotificationCompat.Builder(this, STREAM_SERVICE_NAME)
+            .setOngoing(true)
+            .setContentTitle(STREAM_SERVICE_NAME)
+            .setSmallIcon(R.drawable.raspi_pgb001)
+            .setContentText("Streaming: 00:00:00")
+
+        streamTimer = object : StreamTimer() {
+            override fun updateNotification() {
+                notificationBuilder.setContentText("Streaming: ${this.getTimeElapsedString()}")
+                notificationManager?.notify(
+                    STREAM_SERVICE_NOTIFICATION_ID,
+                    notificationBuilder.build()
+                )
+            }
         }
+
+        startForeground(STREAM_SERVICE_NOTIFICATION_ID, notificationBuilder.build())
+        streamTimer?.start()
     }
 
     override fun onBind(p0: Intent?): IBinder? {
