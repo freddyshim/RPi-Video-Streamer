@@ -8,6 +8,7 @@ buildscript {
         version_navigation = "2.3.1"
         version_timber = "4.7.1"
         version_room = "2.2.5"
+        version_okhttp = "4.9.0"
         version_retrofit = "2.9.0"
         version_moshi = "1.10.0"
         version_glide = "4.11.0"

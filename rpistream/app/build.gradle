@@ -79,6 +79,8 @@ dependencies {
     implementation "com.github.pedroSG94.rtmp-rtsp-stream-client-java:rtplibrary:$version_rtmp"
     // AppAuth: OAuth library
     implementation "net.openid:appauth:0.7.1"
+    // OkHttp: HTTP client library
+    implementation "com.squareup.okhttp3:okhttp:$version_okhttp"
     // Retrofit: networking library
     implementation "com.squareup.retrofit2:retrofit:$version_retrofit"
     implementation "com.squareup.retrofit2:converter-moshi:$version_retrofit"

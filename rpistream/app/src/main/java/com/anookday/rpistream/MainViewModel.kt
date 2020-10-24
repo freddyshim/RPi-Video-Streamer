@@ -6,6 +6,8 @@ import android.content.Intent
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import androidx.lifecycle.*
+import com.anookday.rpistream.chat.NORMAL_CLOSURE_STATUS
+import com.anookday.rpistream.chat.TwitchChatListener
 import com.anookday.rpistream.config.AudioConfig
 import com.anookday.rpistream.config.VideoConfig
 import com.anookday.rpistream.database.User
@@ -17,7 +19,11 @@ import com.pedro.rtplibrary.view.OpenGlView
 import com.serenegiant.usb.USBMonitor
 import kotlinx.coroutines.*
 import net.ossrs.rtmp.ConnectCheckerRtmp
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.WebSocket
 import timber.log.Timber
+import java.util.*
 
 enum class UsbConnectStatus { ATTACHED, DETACHED }
 enum class RtmpConnectStatus { SUCCESS, FAIL, DISCONNECT }
@@ -31,12 +37,16 @@ class MainViewModel(val app: Application) : AndroidViewModel(app) {
     // user database
     private val database = getDatabase(app)
 
+    // name of currently visible fragment
     private val _currentFragment = MutableLiveData<CurrentFragmentName>()
     val currentFragment: LiveData<CurrentFragmentName>
         get() = _currentFragment
 
     // twitch oauth manager
     private val twitchManager = TwitchManager(app.applicationContext, database)
+
+    // twitch chat variables
+    private var chatWebSocket: WebSocket? = null
 
     // user object
     val user: LiveData<User?> = database.userDao.getUser()
@@ -80,6 +90,11 @@ class MainViewModel(val app: Application) : AndroidViewModel(app) {
     private val _audioStatus = MutableLiveData<String?>()
     val audioStatus: LiveData<String?>
         get() = _audioStatus
+
+    // chat messages
+    private val _chatMessages = MutableLiveData<String?>()
+    val chatMessages: LiveData<String?>
+        get() = _chatMessages
 
     /**
      * Initialize required LiveData variables.
@@ -199,7 +214,8 @@ class MainViewModel(val app: Application) : AndroidViewModel(app) {
             withContext(Dispatchers.IO) {
                 // only logged in users can toggle stream
                 user.value?.let {
-                    val streamEndpoint: String? = twitchManager.getIngestEndpoint(it.idToken, it.accessToken)
+                    val streamEndpoint: String? =
+                        twitchManager.getIngestEndpoint(it.idToken, it.accessToken)
                     if (streamEndpoint != null) {
                         val intent = Intent(app.applicationContext, StreamService::class.java)
                         when {
@@ -218,6 +234,34 @@ class MainViewModel(val app: Application) : AndroidViewModel(app) {
                 }
             }
         }
+    }
+
+    /**
+     * Connect to user's chat web socket.
+     */
+    fun connectToChat() {
+        user.value?.let {
+            val client = OkHttpClient()
+            val request = Request.Builder().url("wss://irc-ws.chat.twitch.tv:443").build()
+            val twitchChatListener = object : TwitchChatListener(it.accessToken, it.displayName) {
+                override fun displayMessage(message: String) {
+                    if (_chatMessages.value == null) {
+                        _chatMessages.postValue(message)
+                    } else {
+                        _chatMessages.postValue("${_chatMessages.value}\n$message")
+                    }
+                }
+            }
+            chatWebSocket = client.newWebSocket(request, twitchChatListener)
+        }
+    }
+
+    /**
+     * Safely disconnect from user's chat web socket.
+     */
+    fun disconnectFromChat() {
+        chatWebSocket?.close(NORMAL_CLOSURE_STATUS, null)
+        chatWebSocket = null
     }
 
     /**
@@ -296,19 +340,6 @@ class MainViewModel(val app: Application) : AndroidViewModel(app) {
 
         override fun onDisconnectRtmp() {
             _connectStatus.postValue(RtmpConnectStatus.DISCONNECT)
-        }
-    }
-
-    /**
-     * Factory for constructing MainViewModel with parameter
-     */
-    class Factory(val app: Application): ViewModelProvider.Factory {
-        override fun <T: ViewModel?> create(modelClass: Class<T>): T {
-            if (modelClass.isAssignableFrom(MainViewModel::class.java)) {
-                @Suppress("UNCHECKED_CAST")
-                return MainViewModel(app) as T
-            }
-            throw IllegalArgumentException("Unable to construct view model")
         }
     }
 }

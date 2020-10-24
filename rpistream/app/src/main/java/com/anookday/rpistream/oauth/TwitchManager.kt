@@ -30,7 +30,7 @@ class TwitchManager(context: Context, database: UserDatabase) : OAuthHandler(con
                 ResponseTypeValues.CODE,
                 Uri.parse(context.getString(R.string.twitch_oauth_redirect))
             )
-            builder.setScope("user:read:email channel:read:stream_key")
+            builder.setScope("user:read:email channel:read:stream_key chat:read chat:edit")
             val request: AuthorizationRequest = builder.build()
 
             val authorizationService = AuthorizationService(context)

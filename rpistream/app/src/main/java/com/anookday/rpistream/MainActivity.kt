@@ -77,6 +77,7 @@ class MainActivity : AppCompatActivity() {
         viewModel.unregisterUsbMonitor()
         viewModel.disableCamera()
         viewModel.destroyUsbMonitor()
+        viewModel.disconnectFromChat()
         super.onDestroy()
     }
 

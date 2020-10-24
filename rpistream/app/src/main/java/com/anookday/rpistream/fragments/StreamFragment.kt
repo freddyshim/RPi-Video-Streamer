@@ -87,6 +87,8 @@ class StreamFragment : Fragment() {
         setOnClickListeners()
         // set LiveData observers
         setObservers()
+        // initialize chat
+        viewModel.connectToChat()
     }
 
     override fun onAttach(context: Context) {
@@ -229,6 +231,10 @@ class StreamFragment : Fragment() {
                 )
                 audio_fab_text.text = getString(R.string.audio_off_text)
             }
+        })
+
+        viewModel.chatMessages.observe(viewLifecycleOwner, Observer { messages ->
+            chat_messages.text = messages ?: ""
         })
     }
 }
