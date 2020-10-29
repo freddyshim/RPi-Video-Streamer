@@ -45,19 +45,19 @@
                 android:background="#f7f7f7"
                 android:gravity="center_vertical"
                 android:orientation="vertical"
+                android:padding="16dp"
                 app:layout_constraintBottom_toBottomOf="@id/main_container"
                 app:layout_constraintEnd_toEndOf="@id/main_container"
                 app:layout_constraintStart_toStartOf="@id/main_container"
                 app:layout_constraintTop_toBottomOf="@+id/camera_preview_container">
 
-                <TextView
+                <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/chat_messages"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:layout_margin="16dp"
-                    android:textSize="18sp"
-                    android:textColor="@color/colorTextPrimary"
-                    tools:text="Connecting to chat...\nWelcome to the chat!\nuser: Kappa\nstreamer: PogChamp" />
+                    android:scrollbars="vertical"
+                    tools:listitem="@layout/chat_item" />
+
             </LinearLayout>
 
         </androidx.constraintlayout.widget.ConstraintLayout>

@@ -7,11 +7,13 @@ import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import androidx.lifecycle.*
 import com.anookday.rpistream.chat.NORMAL_CLOSURE_STATUS
+import com.anookday.rpistream.chat.TwitchChatItem
 import com.anookday.rpistream.chat.TwitchChatListener
 import com.anookday.rpistream.config.AudioConfig
 import com.anookday.rpistream.config.VideoConfig
 import com.anookday.rpistream.database.User
 import com.anookday.rpistream.database.getDatabase
+import com.anookday.rpistream.extensions.addNewItem
 import com.anookday.rpistream.oauth.TwitchManager
 import com.anookday.rpistream.stream.StreamService
 import com.pedro.rtplibrary.util.BitrateAdapter
@@ -92,8 +94,8 @@ class MainViewModel(val app: Application) : AndroidViewModel(app) {
         get() = _audioStatus
 
     // chat messages
-    private val _chatMessages = MutableLiveData<String?>()
-    val chatMessages: LiveData<String?>
+    private val _chatMessages = MutableLiveData<MutableList<TwitchChatItem>>()
+    val chatMessages: LiveData<MutableList<TwitchChatItem>>
         get() = _chatMessages
 
     /**
@@ -243,14 +245,8 @@ class MainViewModel(val app: Application) : AndroidViewModel(app) {
         user.value?.let {
             val client = OkHttpClient()
             val request = Request.Builder().url("wss://irc-ws.chat.twitch.tv:443").build()
-            val twitchChatListener = object : TwitchChatListener(it.accessToken, it.displayName) {
-                override fun displayMessage(message: String) {
-                    if (_chatMessages.value == null) {
-                        _chatMessages.postValue(message)
-                    } else {
-                        _chatMessages.postValue("${_chatMessages.value}\n$message")
-                    }
-                }
+            val twitchChatListener = TwitchChatListener(it.accessToken, it.displayName) { message: String ->
+                _chatMessages.addNewItem(TwitchChatItem(message))
             }
             chatWebSocket = client.newWebSocket(request, twitchChatListener)
         }

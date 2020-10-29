@@ -3,18 +3,18 @@ package com.anookday.rpistream.chat
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
-import okio.ByteString
 import timber.log.Timber
 import java.util.*
 
 const val NORMAL_CLOSURE_STATUS = 1000
 
-abstract class TwitchChatListener(private val authToken: String, username: String) :
-    WebSocketListener() {
+class TwitchChatListener(
+    private val authToken: String,
+    username: String,
+    private val displayMessage: (message: String) -> Unit
+) : WebSocketListener() {
 
     private val name = username.toLowerCase(Locale.ROOT)
-
-    abstract fun displayMessage(message: String)
 
     override fun onOpen(webSocket: WebSocket, response: Response) {
         Timber.v("web socket opened")
@@ -32,7 +32,8 @@ abstract class TwitchChatListener(private val authToken: String, username: Strin
             // PING message; issue a PONG message back to keep the connection alive
             text == "PING :tmi.twitch.tv" -> webSocket.send("PONG :tmi.twitch.tv")
             // message indicating that the user has joined the chat channel
-            "(:$name\\.tmi\\.twitch\\.tv 366)".toRegex().find(text) != null -> displayMessage("Welcome to the chat!")
+            "(:$name\\.tmi\\.twitch\\.tv 366)".toRegex()
+                .find(text) != null -> displayMessage("Welcome to the chat!")
         }
     }
 
