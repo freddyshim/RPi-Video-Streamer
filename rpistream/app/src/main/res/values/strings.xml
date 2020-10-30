@@ -10,4 +10,6 @@
     <string name="user_picture_description">User profile picture</string>
     <string name="no_user_text">No User</string>
     <string name="landing_caption">Project Pigeon</string>
+    <string name="chat_connected_msg">Welcome to the chat!</string>
+    <string name="chat_disconnected_msg">Disconnected from the chat.</string>
 </resources>

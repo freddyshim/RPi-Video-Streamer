@@ -6,6 +6,7 @@ import android.content.Intent
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import androidx.lifecycle.*
+import com.anookday.rpistream.chat.Message
 import com.anookday.rpistream.chat.NORMAL_CLOSURE_STATUS
 import com.anookday.rpistream.chat.TwitchChatItem
 import com.anookday.rpistream.chat.TwitchChatListener
@@ -245,7 +246,7 @@ class MainViewModel(val app: Application) : AndroidViewModel(app) {
         user.value?.let {
             val client = OkHttpClient()
             val request = Request.Builder().url("wss://irc-ws.chat.twitch.tv:443").build()
-            val twitchChatListener = TwitchChatListener(it.accessToken, it.displayName) { message: String ->
+            val twitchChatListener = TwitchChatListener(it.accessToken, it.displayName) { message: Message ->
                 _chatMessages.addNewItem(TwitchChatItem(message))
             }
             chatWebSocket = client.newWebSocket(request, twitchChatListener)

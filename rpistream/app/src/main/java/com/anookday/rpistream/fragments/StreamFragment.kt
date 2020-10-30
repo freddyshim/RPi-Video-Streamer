@@ -80,7 +80,7 @@ class StreamFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        chatAdapter = TwitchChatAdapter()
+        chatAdapter = TwitchChatAdapter(context)
         fabConstraintOn = ConstraintSet().apply { clone(context, R.layout.fab_toggle_on) }
         fabConstraintOff = ConstraintSet().apply { clone(context, R.layout.fab_toggle_off) }
         fabTransition = ChangeBounds().apply { interpolator = OvershootInterpolator(1.0F) }

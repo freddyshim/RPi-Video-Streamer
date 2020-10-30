@@ -1,15 +1,20 @@
 package com.anookday.rpistream.chat
 
+import android.content.Context
 import android.text.Layout
+import android.text.SpannableStringBuilder
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.core.content.ContextCompat
+import androidx.core.text.bold
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.anookday.rpistream.R
 import com.anookday.rpistream.databinding.ChatItemBinding
 
-class TwitchChatAdapter() : ListAdapter<TwitchChatItem, TwitchChatAdapter.ViewHolder>(ItemDiff()) {
+class TwitchChatAdapter(private val context: Context?) : ListAdapter<TwitchChatItem, TwitchChatAdapter.ViewHolder>(ItemDiff()) {
     class ViewHolder(val binding: ChatItemBinding) : RecyclerView.ViewHolder(binding.root)
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -18,7 +23,25 @@ class TwitchChatAdapter() : ListAdapter<TwitchChatItem, TwitchChatAdapter.ViewHo
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = getItem(position)
-        holder.binding.chatItem.text = item.message
+        when (val message = item.message) {
+            is Message.SystemMessage -> holder.binding.chatItem.handleSystemMessage(message)
+            is Message.UserMessage -> holder.binding.chatItem.handleUserMessage(message)
+        }
+    }
+
+    private fun TextView.handleSystemMessage(message: Message.SystemMessage) {
+        text = when (message.state) {
+            SystemMessageType.CONNECTED -> resources.getString(R.string.chat_connected_msg)
+            SystemMessageType.DISCONNECTED -> resources.getString(R.string.chat_disconnected_msg)
+        }
+        setTextColor(ContextCompat.getColor(context, R.color.colorTextSecondary))
+
+    }
+
+    private fun TextView.handleUserMessage(message: Message.UserMessage) {
+        val spannable = SpannableStringBuilder().bold { append("${message.name}: ") }
+        spannable.append(message.message)
+        text = spannable
     }
 }
 

@@ -11,14 +11,13 @@ const val NORMAL_CLOSURE_STATUS = 1000
 class TwitchChatListener(
     private val authToken: String,
     username: String,
-    private val displayMessage: (message: String) -> Unit
+    private val displayMessage: (message: Message) -> Unit
 ) : WebSocketListener() {
 
     private val name = username.toLowerCase(Locale.ROOT)
 
     override fun onOpen(webSocket: WebSocket, response: Response) {
         Timber.v("web socket opened")
-        displayMessage("Connecting to chat...")
         webSocket.send("PASS oauth:$authToken")
         webSocket.send("NICK $name")
         webSocket.send("JOIN #$name")
@@ -33,25 +32,28 @@ class TwitchChatListener(
             text == "PING :tmi.twitch.tv" -> webSocket.send("PONG :tmi.twitch.tv")
             // message indicating that the user has joined the chat channel
             "(:$name\\.tmi\\.twitch\\.tv 366)".toRegex()
-                .find(text) != null -> displayMessage("Welcome to the chat!")
+                .find(text) != null -> displayMessage(Message.SystemMessage(SystemMessageType.CONNECTED))
         }
     }
 
     override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
         webSocket.close(NORMAL_CLOSURE_STATUS, null)
         Timber.v("web socket closing")
-        displayMessage("Disconnected from the chat.")
+        displayMessage(Message.SystemMessage(SystemMessageType.DISCONNECTED))
     }
 
     override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
         Timber.e("web socket failed: ${t.message}")
         super.onFailure(webSocket, t, response)
-        displayMessage("Something went wrong. Disconnecting from the chat.")
+        displayMessage(Message.SystemMessage(SystemMessageType.DISCONNECTED))
     }
 
-    fun parseMessage(text: String): String {
-        val messageUser = "(?<=:).*?(?=!)".toRegex().find(text)?.value
+    fun parseMessage(text: String): Message.UserMessage {
+        val username = "(?<=:).*?(?=!)".toRegex().find(text)?.value
         val message = "(?<=#$name\\s:).*".toRegex().find(text)?.value
-        return "$messageUser: $message"
+        if (username != null && message != null) {
+            return Message.UserMessage(UserMessageType.VALID, name, message)
+        }
+        return Message.UserMessage(UserMessageType.INVALID, "", "")
     }
 }
