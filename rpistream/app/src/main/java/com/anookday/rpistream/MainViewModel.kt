@@ -6,10 +6,7 @@ import android.content.Intent
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import androidx.lifecycle.*
-import com.anookday.rpistream.chat.Message
-import com.anookday.rpistream.chat.NORMAL_CLOSURE_STATUS
-import com.anookday.rpistream.chat.TwitchChatItem
-import com.anookday.rpistream.chat.TwitchChatListener
+import com.anookday.rpistream.chat.*
 import com.anookday.rpistream.config.AudioConfig
 import com.anookday.rpistream.config.VideoConfig
 import com.anookday.rpistream.database.User
@@ -250,6 +247,19 @@ class MainViewModel(val app: Application) : AndroidViewModel(app) {
                 _chatMessages.addNewItem(TwitchChatItem(message))
             }
             chatWebSocket = client.newWebSocket(request, twitchChatListener)
+        }
+    }
+
+    /**
+     * Send a message to the chat web socket.
+     */
+    fun sendMessage(text: String) {
+        user.value?.let {
+            chatWebSocket?.apply {
+                send("PRIVMSG #${it.displayName} :$text")
+                val message = Message.UserMessage(UserMessageType.VALID, it.displayName, text)
+                _chatMessages.addNewItem(TwitchChatItem(message))
+            }
         }
     }
 

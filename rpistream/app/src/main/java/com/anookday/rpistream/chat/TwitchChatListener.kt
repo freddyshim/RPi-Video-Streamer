@@ -25,20 +25,22 @@ class TwitchChatListener(
 
     override fun onMessage(webSocket: WebSocket, text: String) {
         Timber.v("message received: $text")
-        when {
-            // user message
-            text.contains("PRIVMSG") -> displayMessage(parseMessage(text))
-            // PING message; issue a PONG message back to keep the connection alive
-            text == "PING :tmi.twitch.tv" -> webSocket.send("PONG :tmi.twitch.tv")
-            // message indicating that the user has joined the chat channel
-            "(:$name\\.tmi\\.twitch\\.tv 366)".toRegex()
-                .find(text) != null -> displayMessage(Message.SystemMessage(SystemMessageType.CONNECTED))
+        with(text) {
+            when {
+                contains("PRIVMSG") -> displayMessage(parseMessage(text))
+                // PING message; issue a PONG message back to keep the connection alive
+                contains("PING") -> webSocket.send("PONG :tmi.twitch.tv")
+                // message indicating that the user has joined the chat channel
+                contains("366") -> displayMessage(Message.SystemMessage(SystemMessageType.CONNECTED))
+                // discard other messages
+                else -> {}
+            }
         }
     }
 
     override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
-        webSocket.close(NORMAL_CLOSURE_STATUS, null)
         Timber.v("web socket closing")
+        webSocket.close(NORMAL_CLOSURE_STATUS, null)
         displayMessage(Message.SystemMessage(SystemMessageType.DISCONNECTED))
     }
 
@@ -52,7 +54,7 @@ class TwitchChatListener(
         val username = "(?<=:).*?(?=!)".toRegex().find(text)?.value
         val message = "(?<=#$name\\s:).*".toRegex().find(text)?.value
         if (username != null && message != null) {
-            return Message.UserMessage(UserMessageType.VALID, name, message)
+            return Message.UserMessage(UserMessageType.VALID, username, message)
         }
         return Message.UserMessage(UserMessageType.INVALID, "", "")
     }

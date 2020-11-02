@@ -12,4 +12,10 @@
     <string name="landing_caption">Project Pigeon</string>
     <string name="chat_connected_msg">Welcome to the chat!</string>
     <string name="chat_disconnected_msg">Disconnected from the chat.</string>
+    <string name="chat_edit_message">Send a message to chat</string>
+    <string name="chat_edit_message_send_description">Button to send message to chat</string>
+    <string name="video_fab_description">Button to toggle video input</string>
+    <string name="audio_fab_description">Button to toggle audio input</string>
+    <string name="stream_fab_description">Button to toggle stream</string>
+    <string name="menu_fab_description">Button to show and hide floating action buttons</string>
 </resources>

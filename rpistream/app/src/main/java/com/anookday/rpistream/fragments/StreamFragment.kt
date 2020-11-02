@@ -7,13 +7,12 @@ import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.os.Bundle
 import android.transition.TransitionManager
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
 import android.view.animation.OvershootInterpolator
 import android.widget.Toast
 import android.transition.ChangeBounds
-import android.view.SurfaceHolder
+import android.view.*
+import android.view.inputmethod.EditorInfo
+import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.content.ContextCompat
@@ -108,6 +107,8 @@ class StreamFragment : Fragment() {
         video_fab.setOnClickListener(::onVideoFabClick)
         audio_fab.setOnClickListener(::onAudioFabClick)
         stream_fab.setOnClickListener(::onStreamFabClick)
+        chat_edit_message_send.setOnClickListener(::onMessageSubmit)
+        chat_edit_message.setOnEditorActionListener(::onMessageActionDone)
 
         viewModel.apply {
             usbStatus.observe(viewLifecycleOwner, ::onUsbStatusChange)
@@ -172,6 +173,23 @@ class StreamFragment : Fragment() {
 
     private fun onStreamFabClick(view: View) {
         viewModel.toggleStream()
+    }
+
+    private fun onMessageActionDone(view: TextView, id: Int, event: KeyEvent?): Boolean {
+        if (id == EditorInfo.IME_ACTION_DONE) {
+            onMessageSubmit(view)
+        }
+        return false
+    }
+
+    private fun onMessageSubmit(view: View) {
+        chat_edit_message.apply {
+            if (text.isNotEmpty()) {
+                viewModel.sendMessage(text.toString())
+                text = null
+            }
+
+        }
     }
 
     private fun onUsbStatusChange(status: UsbConnectStatus?) {

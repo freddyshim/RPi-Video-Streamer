@@ -19,7 +19,8 @@
             app:layout_constraintEnd_toEndOf="@+id/menu_fab"
             app:layout_constraintStart_toStartOf="@+id/menu_fab"
             app:srcCompat="@drawable/ic_baseline_videocam_off_24"
-            app:tint="@color/colorIconText" />
+            app:tint="@color/colorIconText"
+            android:contentDescription="@string/video_fab_description" />
 
         <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/audio_fab"
@@ -33,7 +34,8 @@
             app:layout_constraintEnd_toEndOf="@+id/menu_fab"
             app:layout_constraintStart_toStartOf="@+id/menu_fab"
             app:srcCompat="@drawable/ic_baseline_mic_off_24"
-            app:tint="@color/colorIconText" />
+            app:tint="@color/colorIconText"
+            android:contentDescription="@string/audio_fab_description" />
 
         <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/stream_fab"
@@ -47,7 +49,8 @@
             app:layout_constraintEnd_toEndOf="@+id/menu_fab"
             app:layout_constraintStart_toStartOf="@+id/menu_fab"
             app:srcCompat="@drawable/ic_baseline_live_tv_24"
-            app:tint="@color/colorIconText" />
+            app:tint="@color/colorIconText"
+            android:contentDescription="@string/stream_fab_description" />
 
         <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/menu_fab"
@@ -60,7 +63,8 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:srcCompat="@drawable/ic_baseline_menu_24"
-            app:tint="@color/colorIconText" />
+            app:tint="@color/colorIconText"
+            android:contentDescription="@string/menu_fab_description" />
 
         <TextView
             android:id="@+id/video_fab_text"
@@ -112,5 +116,45 @@
             app:layout_constraintBottom_toBottomOf="@+id/stream_fab"
             app:layout_constraintEnd_toStartOf="@+id/stream_fab"
             app:layout_constraintTop_toTopOf="@+id/stream_fab" />
+
+        <LinearLayout
+            android:id="@+id/chat_edit_container"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_margin="8dp"
+            android:gravity="center_vertical"
+            android:background="@drawable/fab_text_bg"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="2dp"
+            android:paddingBottom="2dp"
+            app:layout_constraintCircleRadius="8dp"
+            app:layout_constraintBottom_toBottomOf="@+id/menu_fab"
+            app:layout_constraintEnd_toStartOf="@+id/menu_fab"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/menu_fab">
+
+                <ImageButton
+                    android:id="@+id/chat_edit_message_send"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@color/colorPrimaryLight"
+                    android:src="@drawable/ic_baseline_send_24"
+                    android:contentDescription="@string/chat_edit_message_send_description" />
+
+                <EditText
+                    android:id="@+id/chat_edit_message"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text"
+                    android:layout_gravity="center_vertical"
+                    android:gravity="center_vertical"
+                    android:background="@color/TRANSPARENT"
+                    android:layout_margin="4dp"
+                    android:imeOptions="actionDone"
+                    android:hint="@string/chat_edit_message"
+                    android:importantForAutofill="no" />
+
+        </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
