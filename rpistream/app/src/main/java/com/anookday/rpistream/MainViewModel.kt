@@ -1,10 +1,12 @@
 package com.anookday.rpistream
 
 import android.app.Application
+import android.app.PendingIntent
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.hardware.usb.UsbDevice
-import android.hardware.usb.UsbManager
+import android.content.IntentFilter
+import android.hardware.usb.*
 import androidx.lifecycle.*
 import com.anookday.rpistream.chat.*
 import com.anookday.rpistream.config.AudioConfig
@@ -23,6 +25,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.WebSocket
 import timber.log.Timber
+import java.io.IOException
 import java.util.*
 
 enum class UsbConnectStatus { ATTACHED, DETACHED }
@@ -47,6 +50,9 @@ class MainViewModel(val app: Application) : AndroidViewModel(app) {
 
     // twitch chat variables
     private var chatWebSocket: WebSocket? = null
+
+    // usb manager
+    var usbManager = app.getSystemService(Context.USB_SERVICE) as UsbManager
 
     // user object
     val user: LiveData<User?> = database.userDao.getUser()
@@ -177,7 +183,6 @@ class MainViewModel(val app: Application) : AndroidViewModel(app) {
      */
     fun toggleVideo() {
         if (videoStatus.value == null) {
-            val usbManager = app.getSystemService(Context.USB_SERVICE) as UsbManager
             val deviceList = usbManager.deviceList
             if (deviceList.isNotEmpty()) {
                 val device: UsbDevice = deviceList.values.elementAt(0)
@@ -243,9 +248,14 @@ class MainViewModel(val app: Application) : AndroidViewModel(app) {
         user.value?.let {
             val client = OkHttpClient()
             val request = Request.Builder().url("wss://irc-ws.chat.twitch.tv:443").build()
-            val twitchChatListener = TwitchChatListener(it.accessToken, it.displayName) { message: Message ->
-                _chatMessages.addNewItem(TwitchChatItem(message))
-            }
+            val twitchChatListener =
+                TwitchChatListener(it.accessToken, it.displayName) { message: Message ->
+                    _chatMessages.addNewItem(TwitchChatItem(message))
+
+                    viewModelScope.launch {
+                        routeMessageToPi(message)
+                    }
+                }
             chatWebSocket = client.newWebSocket(request, twitchChatListener)
         }
     }
@@ -272,9 +282,60 @@ class MainViewModel(val app: Application) : AndroidViewModel(app) {
     }
 
     /**
+     * Send message string over usb connection to pi device.
+     *
+     * @param message object containing message string
+     */
+    private suspend fun routeMessageToPi(message: Message) {
+        withContext(Dispatchers.IO) {
+            if (message is Message.UserMessage) {
+                val deviceList = usbManager.deviceList
+                if (deviceList.isNotEmpty()) {
+                    val device: UsbDevice = deviceList.values.elementAt(0)
+                    if (usbManager.hasPermission(device)) {
+                        for (i in 0 until device.interfaceCount) {
+                            val intf: UsbInterface = device.getInterface(i)
+                            for (j in 0 until intf.endpointCount) {
+                                val ep = intf.getEndpoint(j)
+                                if (ep.direction == UsbConstants.USB_DIR_OUT) {
+                                    val buffer = message.message.toByteArray()
+                                    usbManager.openDevice(device)?.apply {
+                                        claimInterface(intf, true)
+                                        bulkTransfer(ep, buffer, buffer.size, 0)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
      * deviceConnectListener object
      */
     private var onDeviceConnectListener = object : USBMonitor.OnDeviceConnectListener {
+        private val ACTION_USB_PERMISSION = "com.anookday.rpistream.USB_PERMISSION"
+
+        private val usbReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                if (ACTION_USB_PERMISSION == intent.action) {
+                    synchronized(this) {
+                        val device: UsbDevice? = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE)
+
+                        if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
+                            device?.apply {
+                                //call method to set up device communication
+                            }
+                        } else {
+                            Timber.d("permission denied for device $device")
+                        }
+                    }
+                }
+            }
+        }
+
         override fun onConnect(
             device: UsbDevice?,
             ctrlBlock: USBMonitor.UsbControlBlock?,
@@ -297,6 +358,10 @@ class MainViewModel(val app: Application) : AndroidViewModel(app) {
         override fun onAttach(device: UsbDevice?) {
             Timber.v("RPISTREAM onDeviceConnectListener: Device attached")
             _usbStatus.postValue(UsbConnectStatus.ATTACHED)
+            val permissionIntent = PendingIntent.getBroadcast(app.applicationContext, 0, Intent(ACTION_USB_PERMISSION), 0)
+            val intentFilter = IntentFilter(ACTION_USB_PERMISSION)
+            app.registerReceiver(usbReceiver, intentFilter)
+            usbManager.requestPermission(device, permissionIntent)
         }
 
         override fun onDisconnect(device: UsbDevice?, ctrlBlock: USBMonitor.UsbControlBlock?) {

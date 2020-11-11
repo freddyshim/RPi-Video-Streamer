@@ -41,6 +41,11 @@ Now, we build the uvc-gadget app. While you are in the /uvc-gadget directory, co
 ```
 make
 ```
+Enable serial connection (for app-to-pi communication):
+```
+sudo ln -s /lib/systemd/system/getty@.service /etc/systemd/system/getty.target.wants/getty@ttyGS0.service
+sudo systemctl enable getty@ttyGS0.service
+```
 Restart your Raspberry Pi. Upon next boot, your Raspberry Pi should be set up as a USB camera gadget.
 
 More information can be found at the following links:
