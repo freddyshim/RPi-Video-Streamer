@@ -1,4 +1,4 @@
-package com.anookday.rpistream
+package com.anookday.rpistream.stream
 
 import android.content.Intent
 import android.os.Bundle
@@ -14,22 +14,22 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
-import com.anookday.rpistream.databinding.ActivityMainBinding
-import com.anookday.rpistream.stream.StreamService
+import com.anookday.rpistream.R
+import com.anookday.rpistream.databinding.ActivityStreamBinding
+import com.anookday.rpistream.landing.LandingActivity
 import com.bumptech.glide.Glide
 import kotlinx.android.synthetic.main.nav_header.*
 import kotlinx.coroutines.launch
-import net.openid.appauth.AuthState
 
-class MainActivity : AppCompatActivity() {
-    private lateinit var binding: ActivityMainBinding
+class StreamActivity : AppCompatActivity() {
+    private lateinit var binding: ActivityStreamBinding
     private lateinit var navController: NavController
     private val viewModel: MainViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        binding = DataBindingUtil.setContentView(this, R.layout.activity_main)
+        binding = DataBindingUtil.setContentView(this, R.layout.activity_stream)
         binding.lifecycleOwner = this
         binding.viewModel = viewModel
         val navHostFragment =
@@ -56,15 +56,14 @@ class MainActivity : AppCompatActivity() {
 
         viewModel.user.observe(this, Observer { user ->
             if (user != null) {
-                if (AuthState.jsonDeserialize(user.authStateJson).needsTokenRefresh) {
-                    viewModel.logout()
-                } else {
-                    user_id.text = user.displayName
-                    Glide.with(this).load(user.profileImage).into(user_icon)
-                    navController.navigate(R.id.streamFragment)
-                }
+                user_id.text = user.displayName
+                Glide.with(this).load(user.profileImage).into(user_icon)
+                navController.navigate(R.id.streamFragment)
             } else {
-                navController.navigate(R.id.loginFragment)
+                val loginIntent = Intent(this, LandingActivity::class.java)
+                loginIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                startActivity(loginIntent)
+                finish()
             }
         })
 

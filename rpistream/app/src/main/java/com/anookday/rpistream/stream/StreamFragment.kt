@@ -1,4 +1,4 @@
-package com.anookday.rpistream.fragments
+package com.anookday.rpistream.stream
 
 import android.Manifest
 import android.animation.ObjectAnimator
@@ -16,16 +16,13 @@ import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.content.ContextCompat
-import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.anookday.rpistream.*
 import com.anookday.rpistream.chat.TwitchChatAdapter
 import com.anookday.rpistream.chat.TwitchChatItem
 import com.anookday.rpistream.databinding.FragmentStreamBinding
-import com.anookday.rpistream.stream.StreamService
 import kotlinx.android.synthetic.main.fab_toggle_off.*
 import kotlinx.android.synthetic.main.fragment_stream.*
 import timber.log.Timber
@@ -128,7 +125,7 @@ class StreamFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        (activity as MainActivity).enableHeaderAndDrawer()
+        (activity as StreamActivity).enableHeaderAndDrawer()
     }
 
     /**

@@ -18,4 +18,6 @@
     <string name="audio_fab_description">Button to toggle audio input</string>
     <string name="stream_fab_description">Button to toggle stream</string>
     <string name="menu_fab_description">Button to show and hide floating action buttons</string>
+    <string name="logging_in">Logging in...</string>
+    <string name="login_failed">Login failed. Please try again.</string>
 </resources>

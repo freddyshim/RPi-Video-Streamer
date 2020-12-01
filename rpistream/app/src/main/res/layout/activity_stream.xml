@@ -6,7 +6,7 @@
 
         <variable
             name="viewModel"
-            type="com.anookday.rpistream.MainViewModel" />
+            type="com.anookday.rpistream.stream.MainViewModel" />
     </data>
 
     <androidx.drawerlayout.widget.DrawerLayout
@@ -21,7 +21,7 @@
 
             <include
                 android:id="@+id/app_bar"
-                layout="@layout/activity_main_toolbar"
+                layout="@layout/activity_stream_toolbar"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"/>
 

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="twitch_client_id">9dbuqe2nfq49a4561h0isqnt63wctm</string>
+    <string name="auth_host">http://172.30.1.14:8000</string>
+    <string name="auth_path">/auth/twitch</string>
+    <string name="auth_callback_scheme">com.anookday.rpistream</string>
+    <string name="auth_callback_host">oauth2callback</string>
+</resources>

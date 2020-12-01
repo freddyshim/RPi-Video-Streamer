@@ -2,6 +2,8 @@ package com.anookday.rpistream.network
 
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import retrofit2.http.GET
@@ -35,21 +37,46 @@ interface TwitchIngestService {
 }
 
 /**
+ * Retrofit service for our own server APIs.
+ */
+interface PigeonService {
+    @GET("/auth/logout")
+    suspend fun logout(): LogoutStatus
+}
+
+/**
  * Main entry point for network access.
  */
 object Network {
     private val moshi = Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
+    private val loggingInterceptor = HttpLoggingInterceptor().apply {
+        level = HttpLoggingInterceptor.Level.BODY
+    }
+    private val client = OkHttpClient.Builder()
+        .followRedirects(true)
+        .followSslRedirects(true)
+        .addInterceptor(loggingInterceptor)
+        .build()
 
     val twitchService: TwitchService = Retrofit.Builder()
         .baseUrl("https://api.twitch.tv/helix/")
+        .client(client)
         .addConverterFactory(MoshiConverterFactory.create(moshi))
         .build()
         .create(TwitchService::class.java)
 
     val twitchIngestService: TwitchIngestService = Retrofit.Builder()
         .baseUrl("https://ingest.twitch.tv/")
+        .client(client)
         .addConverterFactory(MoshiConverterFactory.create(moshi))
         .build()
         .create(TwitchIngestService::class.java)
+
+    val pigeonService: PigeonService = Retrofit.Builder()
+        .baseUrl("http://172.30.1.14:8000")
+        .client(client)
+        .addConverterFactory(MoshiConverterFactory.create(moshi))
+        .build()
+        .create(PigeonService::class.java)
 }
 

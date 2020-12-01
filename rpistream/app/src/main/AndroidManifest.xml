@@ -30,29 +30,35 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".MainActivity"
-            android:screenOrientation="portrait">
+        <activity android:name=".landing.LandingActivity"
+            android:screenOrientation="portrait"
+            android:noHistory="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+        </activity>
 
+        <activity android:name=".login.LoginActivity"
+            android:screenOrientation="portrait"
+            android:launchMode="singleTask">
+        </activity>
+
+        <activity android:name=".stream.StreamActivity"
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
             </intent-filter>
-
-            <intent-filter>
-                <action android:name="com.anookday.rpistream.HANDLE_AUTHORIZATION_RESPONSE" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
         </activity>
 
-        <activity android:name="net.openid.appauth.RedirectUriReceiverActivity">
+        <activity android:name=".login.LoginAuthenticationActivity"
+            android:noHistory="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="@string/twitch_oauth_redirect"/>
+                <data android:host="@string/auth_callback_host"
+                    android:scheme="@string/auth_callback_scheme" />
             </intent-filter>
         </activity>
         <meta-data

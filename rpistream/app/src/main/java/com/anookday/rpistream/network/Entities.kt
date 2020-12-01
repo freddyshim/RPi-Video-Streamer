@@ -45,3 +45,6 @@ data class TwitchIngest(
     val url_template: String,
     val priority: Int
 )
+
+@JsonClass(generateAdapter = true)
+data class LogoutStatus(val logout: Boolean)

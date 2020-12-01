@@ -4,33 +4,35 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/landingConstraint"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="@color/colorPrimary">
 
+        <ImageView
+            android:id="@+id/landingLogo"
+            android:layout_width="0dp"
+            android:layout_height="192dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:scaleType="fitCenter"
+            app:layout_constraintBottom_toTopOf="@id/landingCaption"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:srcCompat="@drawable/ic_pigeon" />
+
         <TextView
-            android:id="@+id/appName"
+            android:id="@+id/landingCaption"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:gravity="center"
-            android:text="@string/app_name"
+            android:text="@string/logging_in"
             android:textColor="@color/colorIconText"
-            android:textSize="54sp"
-            app:layout_constraintBottom_toTopOf="@+id/twitchLoginButton"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <Button
-            android:id="@+id/twitchLoginButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:backgroundTint="@color/colorIconText"
-            android:text="@string/action_login"
-            android:textColor="@color/colorTextPrimary"
+            android:textSize="32sp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/appName" />
+            app:layout_constraintTop_toBottomOf="@+id/landingLogo" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 </layout>

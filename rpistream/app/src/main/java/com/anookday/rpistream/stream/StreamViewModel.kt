@@ -1,32 +1,33 @@
-package com.anookday.rpistream
+package com.anookday.rpistream.stream
 
 import android.app.Application
 import android.app.PendingIntent
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
-import android.hardware.usb.*
-import androidx.lifecycle.*
+import android.content.*
+import android.hardware.usb.UsbConstants
+import android.hardware.usb.UsbDevice
+import android.hardware.usb.UsbInterface
+import android.hardware.usb.UsbManager
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.viewModelScope
+import com.anookday.rpistream.R
+import com.anookday.rpistream.UserViewModel
 import com.anookday.rpistream.chat.*
 import com.anookday.rpistream.config.AudioConfig
 import com.anookday.rpistream.config.VideoConfig
-import com.anookday.rpistream.database.User
-import com.anookday.rpistream.database.getDatabase
 import com.anookday.rpistream.extensions.addNewItem
 import com.anookday.rpistream.oauth.TwitchManager
-import com.anookday.rpistream.stream.StreamService
 import com.pedro.rtplibrary.util.BitrateAdapter
 import com.pedro.rtplibrary.view.OpenGlView
 import com.serenegiant.usb.USBMonitor
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import net.ossrs.rtmp.ConnectCheckerRtmp
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.WebSocket
 import timber.log.Timber
-import java.io.IOException
-import java.util.*
 
 enum class UsbConnectStatus { ATTACHED, DETACHED }
 enum class RtmpConnectStatus { SUCCESS, FAIL, DISCONNECT }
@@ -34,12 +35,9 @@ enum class RtmpAuthStatus { SUCCESS, FAIL }
 enum class CurrentFragmentName { LANDING, LOGIN, STREAM }
 
 /**
- * ViewModel for [MainActivity].
+ * ViewModel for [StreamActivity].
  */
-class MainViewModel(val app: Application) : AndroidViewModel(app) {
-    // user database
-    private val database = getDatabase(app)
-
+class MainViewModel(app: Application) : UserViewModel(app) {
     // name of currently visible fragment
     private val _currentFragment = MutableLiveData<CurrentFragmentName>()
     val currentFragment: LiveData<CurrentFragmentName>
@@ -53,9 +51,6 @@ class MainViewModel(val app: Application) : AndroidViewModel(app) {
 
     // usb manager
     var usbManager = app.getSystemService(Context.USB_SERVICE) as UsbManager
-
-    // user object
-    val user: LiveData<User?> = database.userDao.getUser()
 
     // video configuration object
     private val _videoConfig = MutableLiveData<VideoConfig>()
@@ -118,24 +113,6 @@ class MainViewModel(val app: Application) : AndroidViewModel(app) {
 
     fun setCurrentFragment(fragmentName: CurrentFragmentName) {
         _currentFragment.value = fragmentName
-    }
-
-    fun getAuthorizationIntent(): Intent? {
-        return twitchManager.getAuthorizationIntent(user.value)
-    }
-
-    fun handleAuthorizationResponse(intent: Intent) {
-        viewModelScope.launch {
-            twitchManager.handleAuthorizationResponse(intent)
-        }
-    }
-
-    fun logout() {
-        viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                database.userDao.delete()
-            }
-        }
     }
 
     fun registerUsbMonitor() {
@@ -220,7 +197,7 @@ class MainViewModel(val app: Application) : AndroidViewModel(app) {
                 // only logged in users can toggle stream
                 user.value?.let {
                     val streamEndpoint: String? =
-                        twitchManager.getIngestEndpoint(it.idToken, it.accessToken)
+                        twitchManager.getIngestEndpoint(it.id, it.accessToken)
                     if (streamEndpoint != null) {
                         val intent = Intent(app.applicationContext, StreamService::class.java)
                         when {
@@ -358,7 +335,11 @@ class MainViewModel(val app: Application) : AndroidViewModel(app) {
         override fun onAttach(device: UsbDevice?) {
             Timber.v("RPISTREAM onDeviceConnectListener: Device attached")
             _usbStatus.postValue(UsbConnectStatus.ATTACHED)
-            val permissionIntent = PendingIntent.getBroadcast(app.applicationContext, 0, Intent(ACTION_USB_PERMISSION), 0)
+            val permissionIntent = PendingIntent.getBroadcast(
+                app.applicationContext, 0, Intent(
+                    ACTION_USB_PERMISSION
+                ), 0
+            )
             val intentFilter = IntentFilter(ACTION_USB_PERMISSION)
             app.registerReceiver(usbReceiver, intentFilter)
             usbManager.requestPermission(device, permissionIntent)
