@@ -17,7 +17,7 @@ class LoginAuthenticationActivity : AppCompatActivity() {
 
         viewModel.user.observe(this, Observer { user ->
             if (user != null) {
-                if (System.currentTimeMillis() > user.tokenExpiryDate) {
+                if (System.currentTimeMillis() > user.auth.tokenExpiryDate) {
                     viewModel.logout()
                 } else {
                     startActivity(Intent(this, StreamActivity::class.java))
@@ -26,11 +26,10 @@ class LoginAuthenticationActivity : AppCompatActivity() {
         })
 
         intent.data?.let { uri ->
-            val accessToken: String? = uri.getQueryParameter("accessToken")
-            val refreshToken: String? = uri.getQueryParameter("refreshToken")
-            val expiresIn: Int? = uri.getQueryParameter("expiresIn")?.toInt()
-            if (accessToken != null && refreshToken != null && expiresIn != null) {
-                viewModel.completeLogin(accessToken, refreshToken, expiresIn)
+            val id: String? = uri.getQueryParameter("id")
+            val token: String? = uri.getQueryParameter("accessToken")
+            if (id != null && token != null) {
+                viewModel.completeLogin(id, token)
             } else {
                 val loginIntent = Intent(this, LoginActivity::class.java)
                 loginIntent.putExtra("error", getString(R.string.login_failed))

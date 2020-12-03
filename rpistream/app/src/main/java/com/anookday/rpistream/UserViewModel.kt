@@ -4,9 +4,9 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.viewModelScope
-import com.anookday.rpistream.database.User
-import com.anookday.rpistream.database.getDatabase
-import com.anookday.rpistream.network.Network
+import com.anookday.rpistream.repository.database.User
+import com.anookday.rpistream.repository.database.getDatabase
+import com.anookday.rpistream.repository.network.Network
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

@@ -56,9 +56,9 @@ class LoginViewModel(app: Application): UserViewModel(app) {
         customTabsIntent.launchUrl(context, Uri.parse(url))
     }
 
-    fun completeLogin(accessToken: String, refreshToken: String, expiresIn: Int) {
+    fun completeLogin(id: String, token: String) {
         viewModelScope.launch {
-            twitchManager.requestUserProfile(accessToken, refreshToken, expiresIn)
+            twitchManager.updateUserProfile(id, token)
         }
     }
 }

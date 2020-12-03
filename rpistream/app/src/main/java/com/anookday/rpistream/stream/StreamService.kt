@@ -12,8 +12,8 @@ import android.media.MediaRecorder
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.anookday.rpistream.R
-import com.anookday.rpistream.config.AudioConfig
-import com.anookday.rpistream.config.VideoConfig
+import com.anookday.rpistream.repository.database.AudioConfig
+import com.anookday.rpistream.repository.database.VideoConfig
 import com.pedro.encoder.Frame
 import com.pedro.encoder.audio.AudioEncoder
 import com.pedro.encoder.audio.GetAacData

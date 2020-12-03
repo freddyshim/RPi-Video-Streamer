@@ -44,7 +44,11 @@ class StreamActivity : AppCompatActivity() {
 
         binding.accDrawer.setNavigationItemSelectedListener {
             when (it.itemId) {
-                R.id.action_logout -> {
+                R.id.nav_settings -> {
+
+                    true
+                }
+                R.id.nav_logout -> {
                     lifecycleScope.launch {
                         viewModel.logout()
                     }
@@ -56,8 +60,8 @@ class StreamActivity : AppCompatActivity() {
 
         viewModel.user.observe(this, Observer { user ->
             if (user != null) {
-                user_id.text = user.displayName
-                Glide.with(this).load(user.profileImage).into(user_icon)
+                user_id.text = user.profile.displayName
+                Glide.with(this).load(user.profile.profileImage).into(user_icon)
                 navController.navigate(R.id.streamFragment)
             } else {
                 val loginIntent = Intent(this, LandingActivity::class.java)
@@ -96,7 +100,7 @@ class StreamActivity : AppCompatActivity() {
                 AlertDialog.Builder(this, R.style.AlertDialogStyle)
                     .setMessage("Are you sure you want to exit?$streamWarning")
                     .setCancelable(false)
-                    .setPositiveButton("Yes") { dialog, which -> exitApp() }
+                    .setPositiveButton("Yes") { _, _ -> exitApp() }
                     .setNegativeButton("No", null)
                     .show()
             }

@@ -2,9 +2,9 @@ package com.anookday.rpistream.oauth
 
 import android.content.Context
 import com.anookday.rpistream.R
-import com.anookday.rpistream.database.User
-import com.anookday.rpistream.database.UserDatabase
-import com.anookday.rpistream.network.*
+import com.anookday.rpistream.repository.database.User
+import com.anookday.rpistream.repository.database.UserDatabase
+import com.anookday.rpistream.repository.network.*
 import kotlinx.coroutines.*
 import timber.log.Timber
 import java.util.*
@@ -14,39 +14,25 @@ import java.util.*
  *
  * @param context Activity instance
  */
-class TwitchManager(context: Context, database: UserDatabase) : OAuthHandler(context, database) {
+class TwitchManager(private val context: Context, val database: UserDatabase) {
     /**
-     * Get user profile info from API provider.
+     * Get user from PP backend server and save it to local database.
      *
-     * @param state Authentication state object containing authorization code
+     * @param userId User identification number (provided by Twitch)
      * @param accessToken Access token used to validate Twitch APIs
      */
-    suspend fun requestUserProfile(accessToken: String, refreshToken: String, expiresIn: Int) {
+    suspend fun updateUserProfile(userId: String, accessToken: String) {
         withContext(Dispatchers.IO) {
-            val userContainer: TwitchProfileList = Network.twitchService.getUserProfile(
-                context.getString(R.string.twitch_client_id),
-                "Bearer $accessToken"
-            )
-            if (userContainer.data.isNotEmpty()) {
-                val profile: TwitchProfile = userContainer.data[0]
-                val user = User(
-                    profile.id,
-                    profile.login,
-                    profile.display_name,
-                    profile.description,
-                    profile.email,
-                    profile.profile_image_url,
-                    accessToken,
-                    refreshToken,
-                    System.currentTimeMillis() + expiresIn * 1000
-                )
-                database.userDao.updateUser(user)
-            }
+            val user: User = Network.pigeonService.getUser(userId, accessToken).toDatabase()
+            database.userDao.updateUser(user)
         }
     }
 
     /**
      * Get the closest Twitch ingest endpoint address.
+     *
+     * @param userId User identification number (provided by Twitch)
+     * @param accessToken Access token used to validate Twitch APIs
      */
     suspend fun getIngestEndpoint(userId: String, accessToken: String): String? {
         var result: String? = null

@@ -1,4 +1,4 @@
-package com.anookday.rpistream.database
+package com.anookday.rpistream.repository.database
 
 import android.content.Context
 import androidx.lifecycle.LiveData

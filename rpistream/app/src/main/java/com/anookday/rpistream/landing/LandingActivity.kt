@@ -29,7 +29,7 @@ class LandingActivity : AppCompatActivity() {
 
         viewModel.user.observe(this, Observer { user ->
             if (user != null) {
-                if (System.currentTimeMillis() > user.tokenExpiryDate) {
+                if (System.currentTimeMillis() > user.auth.tokenExpiryDate) {
                     viewModel.logout()
                 } else {
                     startActivity(Intent(this@LandingActivity, StreamActivity::class.java))

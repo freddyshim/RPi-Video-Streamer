@@ -13,8 +13,8 @@ import androidx.lifecycle.viewModelScope
 import com.anookday.rpistream.R
 import com.anookday.rpistream.UserViewModel
 import com.anookday.rpistream.chat.*
-import com.anookday.rpistream.config.AudioConfig
-import com.anookday.rpistream.config.VideoConfig
+import com.anookday.rpistream.repository.database.AudioConfig
+import com.anookday.rpistream.repository.database.VideoConfig
 import com.anookday.rpistream.extensions.addNewItem
 import com.anookday.rpistream.oauth.TwitchManager
 import com.pedro.rtplibrary.util.BitrateAdapter
@@ -52,20 +52,8 @@ class MainViewModel(app: Application) : UserViewModel(app) {
     // usb manager
     var usbManager = app.getSystemService(Context.USB_SERVICE) as UsbManager
 
-    // video configuration object
-    private val _videoConfig = MutableLiveData<VideoConfig>()
-    val videoConfig: LiveData<VideoConfig>
-        get() = _videoConfig
-
-    // audio configuration object
-    private val _audioConfig = MutableLiveData<AudioConfig>()
-    val audioConfig: LiveData<AudioConfig>
-        get() = _audioConfig
-
     // USB monitor object used to control connected USB devices
-    private val _usbMonitor = MutableLiveData<USBMonitor>()
-    val usbMonitor: LiveData<USBMonitor>
-        get() = _usbMonitor
+    private var usbMonitor: USBMonitor? = null
 
     // USB device status
     private val _usbStatus = MutableLiveData<UsbConnectStatus>()
@@ -104,9 +92,7 @@ class MainViewModel(app: Application) : UserViewModel(app) {
      * @param cameraView OpenGL surface view that displays the camera
      */
     fun init(context: Context, cameraView: OpenGlView) {
-        _videoConfig.value = VideoConfig()
-        _audioConfig.value = AudioConfig()
-        _usbMonitor.value = USBMonitor(context, onDeviceConnectListener)
+        usbMonitor = USBMonitor(context, onDeviceConnectListener)
         StreamService.init(cameraView, connectCheckerRtmp)
         registerUsbMonitor()
     }
@@ -117,13 +103,13 @@ class MainViewModel(app: Application) : UserViewModel(app) {
 
     fun registerUsbMonitor() {
         viewModelScope.launch {
-            _usbMonitor.value?.register()
+            usbMonitor?.register()
         }
     }
 
     fun unregisterUsbMonitor() {
         viewModelScope.launch {
-            _usbMonitor.value?.unregister()
+            usbMonitor?.unregister()
         }
     }
 
@@ -163,7 +149,7 @@ class MainViewModel(app: Application) : UserViewModel(app) {
             val deviceList = usbManager.deviceList
             if (deviceList.isNotEmpty()) {
                 val device: UsbDevice = deviceList.values.elementAt(0)
-                usbMonitor.value?.requestPermission(device)
+                usbMonitor?.requestPermission(device)
             }
         } else {
             disableCamera()
@@ -184,7 +170,7 @@ class MainViewModel(app: Application) : UserViewModel(app) {
     }
 
     fun destroyUsbMonitor() {
-        _usbMonitor.value?.destroy()
+        usbMonitor?.destroy()
     }
 
     /**
@@ -197,7 +183,7 @@ class MainViewModel(app: Application) : UserViewModel(app) {
                 // only logged in users can toggle stream
                 user.value?.let {
                     val streamEndpoint: String? =
-                        twitchManager.getIngestEndpoint(it.id, it.accessToken)
+                        twitchManager.getIngestEndpoint(it.id, it.auth.accessToken)
                     if (streamEndpoint != null) {
                         val intent = Intent(app.applicationContext, StreamService::class.java)
                         when {
@@ -205,7 +191,7 @@ class MainViewModel(app: Application) : UserViewModel(app) {
                                 app.stopService(intent)
                                 _connectStatus.postValue(RtmpConnectStatus.DISCONNECT)
                             }
-                            StreamService.prepareStream(videoConfig.value, audioConfig.value) -> {
+                            StreamService.prepareStream(it.settings.videoConfig, it.settings.audioConfig) -> {
                                 intent.putExtra("endpoint", streamEndpoint)
                                 app.startService(intent)
                                 _connectStatus.postValue(RtmpConnectStatus.SUCCESS)
@@ -226,7 +212,7 @@ class MainViewModel(app: Application) : UserViewModel(app) {
             val client = OkHttpClient()
             val request = Request.Builder().url("wss://irc-ws.chat.twitch.tv:443").build()
             val twitchChatListener =
-                TwitchChatListener(it.accessToken, it.displayName) { message: Message ->
+                TwitchChatListener(it.auth.accessToken, it.profile.displayName) { message: Message ->
                     _chatMessages.addNewItem(TwitchChatItem(message))
 
                     viewModelScope.launch {
@@ -243,8 +229,8 @@ class MainViewModel(app: Application) : UserViewModel(app) {
     fun sendMessage(text: String) {
         user.value?.let {
             chatWebSocket?.apply {
-                send("PRIVMSG #${it.displayName} :$text")
-                val message = Message.UserMessage(UserMessageType.VALID, it.displayName, text)
+                send("PRIVMSG #${it.profile.displayName} :$text")
+                val message = Message.UserMessage(UserMessageType.VALID, it.profile.displayName, text)
                 _chatMessages.addNewItem(TwitchChatItem(message))
             }
         }
@@ -319,11 +305,13 @@ class MainViewModel(app: Application) : UserViewModel(app) {
             createNew: Boolean
         ) {
             Timber.v("RPISTREAM onDeviceConnectListener: Device connected")
-            viewModelScope.launch {
-                try {
-                    _videoStatus.postValue(StreamService.enableCamera(ctrlBlock, videoConfig.value))
-                } catch (e: IllegalArgumentException) {
-                    disableCamera()
+            user.value?.let {
+                viewModelScope.launch {
+                    try {
+                        _videoStatus.postValue(StreamService.enableCamera(ctrlBlock, it.settings.videoConfig))
+                    } catch (e: IllegalArgumentException) {
+                        disableCamera()
+                    }
                 }
             }
         }
