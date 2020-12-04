@@ -3,6 +3,7 @@ package com.anookday.rpistream.stream
 import android.content.Intent
 import android.os.Bundle
 import android.view.MenuItem
+import android.view.View
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -13,6 +14,7 @@ import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.Observer
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
+import androidx.navigation.findNavController
 import androidx.navigation.fragment.NavHostFragment
 import com.anookday.rpistream.R
 import com.anookday.rpistream.databinding.ActivityStreamBinding
@@ -37,15 +39,17 @@ class StreamActivity : AppCompatActivity() {
         navController = navHostFragment.navController
 
         setSupportActionBar(binding.appBar as Toolbar)
-        supportActionBar?.let {
-            it.setHomeAsUpIndicator(R.drawable.ic_baseline_account_circle_24)
-            it.setDisplayHomeAsUpEnabled(true)
+        supportActionBar?.apply {
+            setHomeAsUpIndicator(R.drawable.ic_baseline_menu_24)
+            setDisplayHomeAsUpEnabled(true)
         }
 
         binding.accDrawer.setNavigationItemSelectedListener {
             when (it.itemId) {
+                R.id.nav_account -> {
+                    true
+                }
                 R.id.nav_settings -> {
-
                     true
                 }
                 R.id.nav_logout -> {
@@ -61,6 +65,7 @@ class StreamActivity : AppCompatActivity() {
         viewModel.user.observe(this, Observer { user ->
             if (user != null) {
                 user_id.text = user.profile.displayName
+                user_description.text = user.profile.description
                 Glide.with(this).load(user.profile.profileImage).into(user_icon)
                 navController.navigate(R.id.streamFragment)
             } else {

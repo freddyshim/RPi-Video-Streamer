@@ -3,6 +3,9 @@ package com.anookday.rpistream.repository.database
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.anookday.rpistream.repository.network.NetworkAudioConfig
+import com.anookday.rpistream.repository.network.NetworkVideoConfig
+import com.anookday.rpistream.repository.network.TwitchUserSettings
 
 @Entity
 data class User(
@@ -34,7 +37,16 @@ data class UserSettings(
     @Embedded(prefix = "audio_") val audioConfig: AudioConfig,
     val darkMode: String,
     val developerMode: Boolean
-)
+) {
+    fun toNetwork(): TwitchUserSettings {
+        return TwitchUserSettings(
+            videoConfig.toNetwork(),
+            audioConfig.toNetwork(),
+            darkMode,
+            developerMode
+        )
+    }
+}
 
 /**
  * Video configuration data class.
@@ -56,7 +68,11 @@ data class VideoConfig(
     val hardwareRotation: Boolean = false,
     val iFrameInterval: Int = 0,
     val rotation: Int = 0
-)
+) {
+    fun toNetwork(): NetworkVideoConfig {
+        return NetworkVideoConfig(width, height, fps, bitrate, hardwareRotation, iFrameInterval, rotation)
+    }
+}
 
 /**
  * Audio configuration data class.
@@ -74,4 +90,8 @@ data class AudioConfig(
     val stereo: Boolean = false,
     val echoCanceler: Boolean = false,
     val noiseSuppressor: Boolean = false
-)
+) {
+    fun toNetwork(): NetworkAudioConfig {
+        return NetworkAudioConfig(bitrate, sampleRate, stereo, echoCanceler, noiseSuppressor)
+    }
+}

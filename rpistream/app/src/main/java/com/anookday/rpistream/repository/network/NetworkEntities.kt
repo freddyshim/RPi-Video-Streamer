@@ -46,10 +46,10 @@ data class TwitchUserAuth(
 
 @JsonClass(generateAdapter = true)
 data class TwitchUserSettings(
-    val videoConfig: NetworkVideoConfig,
-    val audioConfig: NetworkAudioConfig,
-    val darkMode: String,
-    val developerMode: Boolean
+    var videoConfig: NetworkVideoConfig,
+    var audioConfig: NetworkAudioConfig,
+    var darkMode: String,
+    var developerMode: Boolean
 ) {
     fun toDatabase(): UserSettings {
         return UserSettings(
@@ -63,13 +63,13 @@ data class TwitchUserSettings(
 
 @JsonClass(generateAdapter = true)
 data class NetworkVideoConfig(
-    val width: Int,
-    val height: Int,
-    val fps: Int,
-    val bitrate: Int,
-    val hardwareRotation: Boolean,
-    val iFrameInterval: Int,
-    val rotation: Int
+    var width: Int,
+    var height: Int,
+    var fps: Int,
+    var bitrate: Int,
+    var hardwareRotation: Boolean,
+    var iFrameInterval: Int,
+    var rotation: Int
 ) {
     fun toDatabase(): VideoConfig {
         return VideoConfig(width, height, fps, bitrate, hardwareRotation, iFrameInterval, rotation)
@@ -78,11 +78,11 @@ data class NetworkVideoConfig(
 
 @JsonClass(generateAdapter = true)
 data class NetworkAudioConfig(
-    val bitrate: Int,
-    val sampleRate: Int,
-    val stereo: Boolean,
-    val echoCanceler: Boolean,
-    val noiseSuppressor: Boolean
+    var bitrate: Int,
+    var sampleRate: Int,
+    var stereo: Boolean,
+    var echoCanceler: Boolean,
+    var noiseSuppressor: Boolean
 ) {
     fun toDatabase(): AudioConfig {
         return AudioConfig(bitrate, sampleRate, stereo, echoCanceler, noiseSuppressor)
