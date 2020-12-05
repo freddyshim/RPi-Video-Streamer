@@ -17,12 +17,16 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.activityViewModels
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.anookday.rpistream.*
 import com.anookday.rpistream.chat.TwitchChatAdapter
 import com.anookday.rpistream.chat.TwitchChatItem
 import com.anookday.rpistream.databinding.FragmentStreamBinding
+import com.anookday.rpistream.repository.database.User
+import kotlinx.android.synthetic.main.activity_stream.*
 import kotlinx.android.synthetic.main.fab_toggle_off.*
 import kotlinx.android.synthetic.main.fragment_stream.*
 import timber.log.Timber
@@ -30,7 +34,7 @@ import timber.log.Timber
 class StreamFragment : Fragment() {
     private lateinit var binding: FragmentStreamBinding
     private lateinit var chatAdapter: TwitchChatAdapter
-    private val viewModel: MainViewModel by activityViewModels()
+    private lateinit var viewModel: StreamViewModel
 
     // fab animation
     private lateinit var fabConstraintOn: ConstraintSet
@@ -90,7 +94,7 @@ class StreamFragment : Fragment() {
             cameraPreview.holder.addCallback(surfaceViewCallback)
         }
 
-        viewModel.apply {
+        viewModel = ViewModelProvider(requireActivity()).get(StreamViewModel::class.java).apply {
             init(requireContext(), binding.cameraPreview)
         }
 
@@ -114,18 +118,21 @@ class StreamFragment : Fragment() {
             videoStatus.observe(viewLifecycleOwner, ::onVideoStatusChange)
             audioStatus.observe(viewLifecycleOwner, ::onAudioStatusChange)
             chatMessages.observe(viewLifecycleOwner, ::onChatMessagesChange)
-            connectToChat()
+            user.observe(viewLifecycleOwner, ::onUserChange)
         }
     }
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
-        viewModel.setCurrentFragment(CurrentFragmentName.STREAM)
     }
 
     override fun onResume() {
+        viewModel.setCurrentFragment(CurrentFragmentName.STREAM)
+        (activity as StreamActivity).apply {
+            supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_baseline_menu_24)
+            editNavigationDrawer(getString(R.string.app_name), true)
+        }
         super.onResume()
-        (activity as StreamActivity).enableHeaderAndDrawer()
     }
 
     /**
@@ -263,5 +270,12 @@ class StreamFragment : Fragment() {
 
     private fun onChatMessagesChange(messages: MutableList<TwitchChatItem>) {
         chatAdapter.submitList(messages.toList())
+    }
+
+    private fun onUserChange(user: User?) {
+        when (viewModel.chatStatus.value) {
+            ChatStatus.CONNECTED -> {}
+            else -> viewModel.connectToChat()
+        }
     }
 }

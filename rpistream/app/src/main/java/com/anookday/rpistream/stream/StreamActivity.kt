@@ -3,7 +3,6 @@ package com.anookday.rpistream.stream
 import android.content.Intent
 import android.os.Bundle
 import android.view.MenuItem
-import android.view.View
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -14,7 +13,6 @@ import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.Observer
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
-import androidx.navigation.findNavController
 import androidx.navigation.fragment.NavHostFragment
 import com.anookday.rpistream.R
 import com.anookday.rpistream.databinding.ActivityStreamBinding
@@ -26,55 +24,57 @@ import kotlinx.coroutines.launch
 class StreamActivity : AppCompatActivity() {
     private lateinit var binding: ActivityStreamBinding
     private lateinit var navController: NavController
-    private val viewModel: MainViewModel by viewModels()
+    private val viewModel by viewModels<StreamViewModel>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         binding = DataBindingUtil.setContentView(this, R.layout.activity_stream)
-        binding.lifecycleOwner = this
-        binding.viewModel = viewModel
+
         val navHostFragment =
             supportFragmentManager.findFragmentById(R.id.navHostFragment) as NavHostFragment
         navController = navHostFragment.navController
 
         setSupportActionBar(binding.appBar as Toolbar)
-        supportActionBar?.apply {
-            setHomeAsUpIndicator(R.drawable.ic_baseline_menu_24)
-            setDisplayHomeAsUpEnabled(true)
-        }
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
-        binding.accDrawer.setNavigationItemSelectedListener {
-            when (it.itemId) {
-                R.id.nav_account -> {
-                    true
-                }
-                R.id.nav_settings -> {
-                    true
-                }
-                R.id.nav_logout -> {
-                    lifecycleScope.launch {
-                        viewModel.logout()
+        binding.apply {
+            lifecycleOwner = this@StreamActivity
+            accDrawer.setNavigationItemSelectedListener {
+                when (it.itemId) {
+                    R.id.nav_account -> {
+                        appContainer.closeDrawers()
+                        navController.navigate(R.id.action_streamFragment_to_accountFragment)
+                        true
                     }
-                    true
+                    R.id.nav_settings -> {
+                        true
+                    }
+                    R.id.nav_logout -> {
+                        lifecycleScope.launch {
+                            viewModel.logout()
+                        }
+                        true
+                    }
+                    else -> false
                 }
-                else -> false
             }
         }
 
-        viewModel.user.observe(this, Observer { user ->
-            if (user != null) {
-                user_id.text = user.profile.displayName
-                user_description.text = user.profile.description
-                Glide.with(this).load(user.profile.profileImage).into(user_icon)
-                navController.navigate(R.id.streamFragment)
-            } else {
-                val loginIntent = Intent(this, LandingActivity::class.java)
-                loginIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                startActivity(loginIntent)
-                finish()
-            }
-        })
+        viewModel.apply {
+            user.observe(this@StreamActivity, Observer { user ->
+                if (user != null) {
+                    user_id.text = user.profile.displayName
+                    user_description.text = user.profile.description
+                    Glide.with(this@StreamActivity).load(user.profile.profileImage).into(user_icon)
+                } else {
+                    val loginIntent = Intent(this@StreamActivity, LandingActivity::class.java)
+                    loginIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                    startActivity(loginIntent)
+                    finish()
+                }
+            })
+        }
 
     }
 
@@ -91,14 +91,18 @@ class StreamActivity : AppCompatActivity() {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
-            android.R.id.home -> binding.appContainer.openDrawer(GravityCompat.START)
+            android.R.id.home -> {
+                when (viewModel.currentFragment.value) {
+                    CurrentFragmentName.STREAM -> binding.appContainer.openDrawer(GravityCompat.START)
+                    else -> onBackPressed()
+                }
+            }
         }
-        return true
+        return super.onOptionsItemSelected(item)
     }
 
     override fun onBackPressed() {
         when (viewModel.currentFragment.value) {
-            CurrentFragmentName.LOGIN -> exitApp()
             CurrentFragmentName.STREAM -> {
                 val streamWarning =
                     if (viewModel.connectStatus.value == RtmpConnectStatus.SUCCESS) " Your current stream will end." else ""
@@ -118,13 +122,14 @@ class StreamActivity : AppCompatActivity() {
         finish()
     }
 
-    fun enableHeaderAndDrawer() {
-        supportActionBar?.show()
-        binding.appContainer.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
-    }
-
-    fun disableHeaderAndDrawer() {
-        supportActionBar?.hide()
-        binding.appContainer.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
+    fun editNavigationDrawer(title: String, enableDrawer: Boolean) {
+        supportActionBar?.title = title
+        val drawerLockMode =
+            if (enableDrawer) {
+                DrawerLayout.LOCK_MODE_UNLOCKED
+            } else {
+                DrawerLayout.LOCK_MODE_LOCKED_CLOSED
+            }
+        binding.appContainer.setDrawerLockMode(drawerLockMode)
     }
 }

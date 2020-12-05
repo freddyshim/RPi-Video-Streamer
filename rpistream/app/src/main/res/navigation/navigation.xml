@@ -13,10 +13,19 @@
         <action
             android:id="@+id/action_streamFragment_to_settingsFragment"
             app:destination="@id/settingsFragment" />
+        <action
+            android:id="@+id/action_streamFragment_to_accountFragment"
+            app:destination="@id/accountFragment" />
     </fragment>
     <fragment
         android:id="@+id/settingsFragment"
         android:name="com.anookday.rpistream.stream.SettingsFragment"
-        android:label="SettingsFragment" />
+        android:label="SettingsFragment"
+        tools:layout="@layout/fragment_settings" />
+    <fragment
+        android:id="@+id/accountFragment"
+        android:name="com.anookday.rpistream.stream.AccountFragment"
+        android:label="AccountFragment"
+        tools:layout="@layout/fragment_account" />
 
 </navigation>

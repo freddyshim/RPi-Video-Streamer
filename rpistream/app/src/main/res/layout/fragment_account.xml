@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <data>
+
+        <variable
+            name="user"
+            type="com.anookday.rpistream.repository.database.User" />
+    </data>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_margin="16dp"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:id="@+id/username_container"
+            style="@style/form_container">
+
+            <TextView
+                android:id="@+id/username_label"
+                style="@style/form_label"
+                android:text="@string/form_username" />
+
+            <TextView
+                android:id="@+id/username_input"
+                style="@style/form_input"
+                android:text="@{user.profile.login}"
+                tools:text="anookday" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/display_name_container"
+            style="@style/form_container">
+
+            <TextView
+                android:id="@+id/display_name_label"
+                style="@style/form_label"
+                android:text="@string/form_display_name" />
+
+            <TextView
+                android:id="@+id/display_name_input"
+                style="@style/form_input"
+                android:text="@{user.profile.displayName}"
+                tools:text="anookday" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/email_container"
+            style="@style/form_container">
+
+            <TextView
+                android:id="@+id/email_label"
+                style="@style/form_label"
+                android:text="@string/form_email" />
+
+            <TextView
+                android:id="@+id/email_input"
+                style="@style/form_input"
+                android:text="@{user.profile.email}"
+                tools:text="anookday@gmail.com" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/description_container"
+            style="@style/form_container">
+
+            <TextView
+                android:id="@+id/description_label"
+                style="@style/form_label"
+                android:text="@string/form_description" />
+
+            <TextView
+                android:id="@+id/description_input"
+                style="@style/form_input"
+                android:text="@{user.profile.description}"
+                tools:text="@string/lorem_ipsum" />
+        </LinearLayout>
+
+    </LinearLayout>
+
+</layout>

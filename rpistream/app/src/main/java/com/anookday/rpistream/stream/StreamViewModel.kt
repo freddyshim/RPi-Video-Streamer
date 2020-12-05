@@ -32,12 +32,13 @@ import timber.log.Timber
 enum class UsbConnectStatus { ATTACHED, DETACHED }
 enum class RtmpConnectStatus { SUCCESS, FAIL, DISCONNECT }
 enum class RtmpAuthStatus { SUCCESS, FAIL }
-enum class CurrentFragmentName { LANDING, LOGIN, STREAM }
+enum class CurrentFragmentName { STREAM, ACCOUNT, SETTINGS }
+enum class ChatStatus { CONNECTED, DISCONNECTED, ERROR }
 
 /**
  * ViewModel for [StreamActivity].
  */
-class MainViewModel(app: Application) : UserViewModel(app) {
+class StreamViewModel(app: Application) : UserViewModel(app) {
     // name of currently visible fragment
     private val _currentFragment = MutableLiveData<CurrentFragmentName>()
     val currentFragment: LiveData<CurrentFragmentName>
@@ -79,6 +80,10 @@ class MainViewModel(app: Application) : UserViewModel(app) {
     private val _audioStatus = MutableLiveData<String?>()
     val audioStatus: LiveData<String?>
         get() = _audioStatus
+
+    private val _chatStatus = MutableLiveData<ChatStatus>()
+    val chatStatus: LiveData<ChatStatus>
+        get() = _chatStatus
 
     // chat messages
     private val _chatMessages = MutableLiveData<MutableList<TwitchChatItem>>()
@@ -220,6 +225,7 @@ class MainViewModel(app: Application) : UserViewModel(app) {
                     }
                 }
             chatWebSocket = client.newWebSocket(request, twitchChatListener)
+            _chatStatus.value = ChatStatus.CONNECTED
         }
     }
 
@@ -242,6 +248,7 @@ class MainViewModel(app: Application) : UserViewModel(app) {
     fun disconnectFromChat() {
         chatWebSocket?.close(NORMAL_CLOSURE_STATUS, null)
         chatWebSocket = null
+        _chatStatus.value = ChatStatus.DISCONNECTED
     }
 
     /**
