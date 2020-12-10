@@ -24,7 +24,7 @@ import kotlinx.coroutines.launch
 class StreamActivity : AppCompatActivity() {
     private lateinit var binding: ActivityStreamBinding
     private lateinit var navController: NavController
-    private val viewModel by viewModels<StreamViewModel>()
+    private val viewModel: StreamViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -48,6 +48,8 @@ class StreamActivity : AppCompatActivity() {
                         true
                     }
                     R.id.nav_settings -> {
+                        appContainer.closeDrawers()
+                        navController.navigate(R.id.action_streamFragment_to_settingsFragment)
                         true
                     }
                     R.id.nav_logout -> {
@@ -102,8 +104,9 @@ class StreamActivity : AppCompatActivity() {
     }
 
     override fun onBackPressed() {
-        when (viewModel.currentFragment.value) {
-            CurrentFragmentName.STREAM -> {
+        val currentFragment = supportFragmentManager.findFragmentById(R.id.navHostFragment)
+        when (currentFragment!!::class) {
+            StreamFragment::class -> {
                 val streamWarning =
                     if (viewModel.connectStatus.value == RtmpConnectStatus.SUCCESS) " Your current stream will end." else ""
                 AlertDialog.Builder(this, R.style.AlertDialogStyle)
@@ -115,6 +118,19 @@ class StreamActivity : AppCompatActivity() {
             }
             else -> super.onBackPressed()
         }
+//        when (viewModel.currentFragment.value) {
+//            CurrentFragmentName.STREAM -> {
+//                val streamWarning =
+//                    if (viewModel.connectStatus.value == RtmpConnectStatus.SUCCESS) " Your current stream will end." else ""
+//                AlertDialog.Builder(this, R.style.AlertDialogStyle)
+//                    .setMessage("Are you sure you want to exit?$streamWarning")
+//                    .setCancelable(false)
+//                    .setPositiveButton("Yes") { _, _ -> exitApp() }
+//                    .setNegativeButton("No", null)
+//                    .show()
+//            }
+//            else -> super.onBackPressed()
+//        }
     }
 
     private fun exitApp() {

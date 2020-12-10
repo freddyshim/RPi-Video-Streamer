@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <RadioGroup
+        android:id="@+id/iframe_radio_group"
+        style="@style/settingsRadioGroup">
+
+        <RadioButton
+            android:id="@+id/iframe_0"
+            style="@style/settingsRadioButton"
+            android:text="@string/video_config_iframe_0" />
+
+        <RadioButton
+            android:id="@+id/iframe_1"
+            style="@style/settingsRadioButton"
+            android:text="@string/video_config_iframe_1" />
+
+        <RadioButton
+            android:id="@+id/iframe_2"
+            style="@style/settingsRadioButton"
+            android:text="@string/video_config_iframe_2" />
+
+        <RadioButton
+            android:id="@+id/iframe_3"
+            style="@style/settingsRadioButton"
+            android:text="@string/video_config_iframe_3" />
+
+        <RadioButton
+            android:id="@+id/iframe_4"
+            style="@style/settingsRadioButton"
+            android:text="@string/video_config_iframe_4" />
+
+        <RadioButton
+            android:id="@+id/iframe_5"
+            style="@style/settingsRadioButton"
+            android:text="@string/video_config_iframe_5" />
+    </RadioGroup>
+
+</layout>

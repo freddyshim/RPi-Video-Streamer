@@ -1,19 +1,55 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools" >
+    xmlns:tools="http://schemas.android.com/tools">
 
     <data>
-        <variable name="viewModel" type="com.anookday.rpistream.stream.SettingsViewModel" />
+
+        <variable
+            name="settings"
+            type="com.anookday.rpistream.repository.database.UserSettings" />
+
+        <variable
+            name="model"
+            type="com.anookday.rpistream.stream.StreamViewModel" />
     </data>
 
-    <LinearLayout android:layout_height="match_parent"
-        android:layout_width="match_parent">
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="hi"
-            android:textSize="64sp"/>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <include
+            android:id="@+id/video_config_item"
+            layout="@layout/settings_item"
+            style="@style/listItem"
+            app:icon="@{@drawable/ic_baseline_videocam_24}"
+            app:title="@{@string/video_config_title}" />
+
+        <include
+            android:id="@+id/audio_config_item"
+            layout="@layout/settings_item"
+            style="@style/listItem"
+            app:icon="@{@drawable/ic_baseline_mic_24}"
+            app:title="@{@string/audio_config_title}" />
+
+        <include
+            android:id="@+id/dark_mode_item"
+            layout="@layout/settings_item"
+            style="@style/listItem"
+            app:icon="@{@drawable/ic_baseline_bedtime_24}"
+            app:title="@{@string/dark_mode_title}" />
+
+        <include
+            android:id="@+id/developer_mode_item"
+            layout="@layout/settings_switch_item"
+            style="@style/listItem"
+            app:icon="@{@drawable/ic_baseline_code_24}"
+            app:title="@{@string/developer_mode_title}"
+            app:subtitle="@{@string/developer_mode_subtitle}"
+            app:checked="@{settings.developerMode}"
+            app:onCheckedChanged="@{model.onDeveloperModeCheck}" />
+
     </LinearLayout>
 
 </layout>

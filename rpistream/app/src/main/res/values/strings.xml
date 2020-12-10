@@ -1,15 +1,25 @@
 <resources>
+    <!-- GENERAL -->
     <string name="app_name">Raspberry Pi Video Streamer</string>
-    <string name="stream_uri_hint">rtmp://yourEndpoint</string>
+    <string name="lorem_ipsum">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</string>
+    <!-- LANDING -->
+    <string name="landing_caption">Project Pigeon</string>
+    <!-- LOGIN -->
+    <string name="action_login">Log In to Twitch</string>
+    <string name="logging_in">Logging in…</string>
+    <string name="login_failed">Login failed. Please try again.</string>
+    <!-- NAVIGATION DRAWER -->
+    <string name="user_picture_description">User profile picture</string>
+    <string name="no_user_text">No User</string>
+    <string name="nav_account">My Account</string>
+    <string name="nav_settings">Settings</string>
+    <string name="nav_logout">Log Out</string>
+    <!-- STREAM -->
     <string name="video_off_text">Video not connected</string>
     <string name="audio_on_text">Audio connected</string>
     <string name="audio_off_text">Audio not connected</string>
     <string name="stream_off_text">Stream: OFF</string>
     <string name="stream_on_text">Stream: ON</string>
-    <string name="action_login">Log In to Twitch</string>
-    <string name="user_picture_description">User profile picture</string>
-    <string name="no_user_text">No User</string>
-    <string name="landing_caption">Project Pigeon</string>
     <string name="chat_connected_msg">Welcome to the chat!</string>
     <string name="chat_disconnected_msg">Disconnected from the chat.</string>
     <string name="chat_edit_message">Send a message to chat</string>
@@ -18,16 +28,68 @@
     <string name="audio_fab_description">Button to toggle audio input</string>
     <string name="stream_fab_description">Button to toggle stream</string>
     <string name="menu_fab_description">Button to show and hide floating action buttons</string>
-    <string name="logging_in">Logging in...</string>
-    <string name="login_failed">Login failed. Please try again.</string>
-    <string name="nav_account">My Account</string>
-    <string name="nav_settings">Settings</string>
-    <string name="nav_logout">Log Out</string>
-    <string name="lorem_ipsum">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</string>
+    <!-- ACCOUNT -->
     <string name="form_username">Username</string>
     <string name="form_display_name">Display Name</string>
     <string name="form_email">Email</string>
     <string name="form_description">Description</string>
     <string name="account_title">Account</string>
+    <!-- SETTINGS -->
     <string name="settings_title">Settings</string>
+    <!-- VIDEO CONFIG -->
+    <string name="video_config_title">Video Settings</string>
+    <string name="video_config_resolution_title">Video Resolution</string>
+    <string name="video_config_resolution_subtitle">%1$d x %2$d</string>
+    <string name="video_config_resolution_360">360p</string>
+    <string name="video_config_resolution_480">480p</string>
+    <string name="video_config_resolution_720">720p</string>
+    <string name="video_config_resolution_1080">1080p</string>
+    <string name="video_config_fps_title">Frames per Second</string>
+    <string name="video_config_fps_24">24</string>
+    <string name="video_config_fps_30">30</string>
+    <string name="video_config_fps_60">60</string>
+    <string name="video_config_bitrate_title">Bitrate</string>
+    <string name="video_config_bitrate_subtitle">%1$d Kb/s (recommended: 4000 ~ 8000)</string>
+    <string name="video_config_bitrate_2000">2,000 Kb/s</string>
+    <string name="video_config_bitrate_4000">4,000 Kb/s</string>
+    <string name="video_config_bitrate_6000">6,000 Kb/s</string>
+    <string name="video_config_bitrate_8000">8,000 Kb/s</string>
+    <string name="video_config_bitrate_10000">10,000 Kb/s</string>
+    <string name="video_config_iframe_title">I-Frame Interval</string>
+    <string name="video_config_iframe_subtitle">%1$d (recommended: 2)</string>
+    <string name="video_config_iframe_0">0 per second</string>
+    <string name="video_config_iframe_1">1 per second</string>
+    <string name="video_config_iframe_2">2 per second</string>
+    <string name="video_config_iframe_3">3 per second</string>
+    <string name="video_config_iframe_4">4 per second</string>
+    <string name="video_config_iframe_5">5 per second</string>
+    <string name="video_config_rotation_title">Rotation</string>
+    <string name="video_config_rotation_0">0</string>
+    <string name="video_config_rotation_90">90</string>
+    <string name="video_config_rotation_180">180</string>
+    <string name="video_config_rotation_270">270</string>
+    <!-- AUDIO CONFIG -->
+    <string name="audio_config_title">Audio Settings</string>
+    <string name="audio_config_bitrate_title">Bitrate</string>
+    <string name="audio_config_bitrate_subtitle">%1$d Kb/s (recommended: 128 ~ 256)</string>
+    <string name="audio_config_bitrate_64">64</string>
+    <string name="audio_config_bitrate_128">128</string>
+    <string name="audio_config_bitrate_256">256</string>
+    <string name="audio_config_bitrate_512">512</string>
+    <string name="audio_config_samplerate_title">Sample Rate</string>
+    <string name="audio_config_samplerate_subtitle">%1$d Hz (recommended: 44100)</string>
+    <string name="audio_config_samplerate_32000">32,000 Hz</string>
+    <string name="audio_config_samplerate_44100">44,100 Hz</string>
+    <string name="audio_config_samplerate_48000">48,000 Hz</string>
+    <string name="audio_config_stereo_title">Use Stereo</string>
+    <string name="audio_config_echocanceler_title">Use Echo Canceler</string>
+    <string name="audio_config_noisesuppressor_title">Use Noise Suppressor</string>
+    <!-- DARK MODE CONFIG -->
+    <string name="dark_mode_title">Dark Mode</string>
+    <string name="dark_mode_on">On</string>
+    <string name="dark_mode_off">Off</string>
+    <string name="dark_mode_system">Use System Settings</string>
+    <!-- DEVELOPER MODE CONFIG -->
+    <string name="developer_mode_title">Developer Mode</string>
+    <string name="developer_mode_subtitle">Toggle on-screen debugging and statistics</string>
 </resources>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <RadioGroup
+        android:id="@+id/rotation_radio_group"
+        style="@style/settingsRadioGroup">
+
+        <RadioButton
+            android:id="@+id/rotation_0"
+            style="@style/settingsRadioButton"
+            android:text="@string/video_config_rotation_0" />
+
+        <RadioButton
+            android:id="@+id/rotation_90"
+            style="@style/settingsRadioButton"
+            android:text="@string/video_config_rotation_90" />
+
+        <RadioButton
+            android:id="@+id/rotation_180"
+            style="@style/settingsRadioButton"
+            android:text="@string/video_config_rotation_180" />
+
+        <RadioButton
+            android:id="@+id/rotation_270"
+            style="@style/settingsRadioButton"
+            android:text="@string/video_config_rotation_270" />
+
+    </RadioGroup>
+</layout>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <RadioGroup
+        android:id="@+id/resolution_radio_group"
+        style="@style/settingsRadioGroup">
+
+        <RadioButton
+            android:id="@+id/resolution_360"
+            style="@style/settingsRadioButton"
+            android:text="@string/video_config_resolution_360" />
+
+        <RadioButton
+            android:id="@+id/resolution_480"
+            style="@style/settingsRadioButton"
+            android:text="@string/video_config_resolution_480" />
+
+        <RadioButton
+            android:id="@+id/resolution_720"
+            style="@style/settingsRadioButton"
+            android:text="@string/video_config_resolution_720" />
+
+        <RadioButton
+            android:id="@+id/resolution_1080"
+            style="@style/settingsRadioButton"
+            android:text="@string/video_config_resolution_1080" />
+    </RadioGroup>
+
+</layout>

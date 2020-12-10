@@ -17,6 +17,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
@@ -34,7 +35,7 @@ import timber.log.Timber
 class StreamFragment : Fragment() {
     private lateinit var binding: FragmentStreamBinding
     private lateinit var chatAdapter: TwitchChatAdapter
-    private lateinit var viewModel: StreamViewModel
+    private val viewModel: StreamViewModel by activityViewModels()
 
     // fab animation
     private lateinit var fabConstraintOn: ConstraintSet
@@ -94,7 +95,7 @@ class StreamFragment : Fragment() {
             cameraPreview.holder.addCallback(surfaceViewCallback)
         }
 
-        viewModel = ViewModelProvider(requireActivity()).get(StreamViewModel::class.java).apply {
+        viewModel.apply {
             init(requireContext(), binding.cameraPreview)
         }
 

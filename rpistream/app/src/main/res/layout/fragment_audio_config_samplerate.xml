@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <RadioGroup
+        android:id="@+id/audio_samplerate_radio_group"
+        style="@style/settingsRadioGroup">
+
+        <RadioButton
+            android:id="@+id/audio_samplerate_32000"
+            style="@style/settingsRadioButton"
+            android:text="@string/audio_config_samplerate_32000" />
+
+        <RadioButton
+            android:id="@+id/audio_samplerate_44100"
+            style="@style/settingsRadioButton"
+            android:text="@string/audio_config_samplerate_44100" />
+
+        <RadioButton
+            android:id="@+id/audio_samplerate_48000"
+            style="@style/settingsRadioButton"
+            android:text="@string/audio_config_samplerate_48000" />
+
+    </RadioGroup>
+
+</layout>

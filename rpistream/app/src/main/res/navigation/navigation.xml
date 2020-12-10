@@ -9,7 +9,7 @@
         android:id="@+id/streamFragment"
         android:name="com.anookday.rpistream.stream.StreamFragment"
         android:label="StreamFragment"
-        tools:layout="@layout/fragment_stream" >
+        tools:layout="@layout/fragment_stream">
         <action
             android:id="@+id/action_streamFragment_to_settingsFragment"
             app:destination="@id/settingsFragment" />
@@ -19,13 +19,96 @@
     </fragment>
     <fragment
         android:id="@+id/settingsFragment"
-        android:name="com.anookday.rpistream.stream.SettingsFragment"
+        android:name="com.anookday.rpistream.stream.settings.SettingsFragment"
         android:label="SettingsFragment"
-        tools:layout="@layout/fragment_settings" />
+        tools:layout="@layout/fragment_settings">
+        <action
+            android:id="@+id/action_settingsFragment_to_videoConfigFragment"
+            app:destination="@id/videoConfigFragment" />
+        <action
+            android:id="@+id/action_settingsFragment_to_audioConfigFragment"
+            app:destination="@id/audioConfigFragment" />
+        <action
+            android:id="@+id/action_settingsFragment_to_darkModeFragment"
+            app:destination="@id/darkModeFragment" />
+    </fragment>
     <fragment
         android:id="@+id/accountFragment"
         android:name="com.anookday.rpistream.stream.AccountFragment"
         android:label="AccountFragment"
         tools:layout="@layout/fragment_account" />
+    <fragment
+        android:id="@+id/videoConfigFragment"
+        android:name="com.anookday.rpistream.stream.settings.VideoConfigFragment"
+        android:label="VideoConfigFragment"
+        tools:layout="@layout/fragment_video_config">
+        <action
+            android:id="@+id/action_videoConfigFragment_to_videoConfigResolutionFragment"
+            app:destination="@id/videoConfigResolutionFragment" />
+        <action
+            android:id="@+id/action_videoConfigFragment_to_videoConfigFpsFragment"
+            app:destination="@id/videoConfigFpsFragment" />
+        <action
+            android:id="@+id/action_videoConfigFragment_to_videoConfigBitrateFragment"
+            app:destination="@id/videoConfigBitrateFragment" />
+        <action
+            android:id="@+id/action_videoConfigFragment_to_videoConfigIFrameFragment"
+            app:destination="@id/videoConfigIFrameFragment" />
+        <action
+            android:id="@+id/action_videoConfigFragment_to_videoConfigRotationFragment"
+            app:destination="@id/videoConfigRotationFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/audioConfigFragment"
+        android:name="com.anookday.rpistream.stream.settings.AudioConfigFragment"
+        android:label="AudioConfigFragment"
+        tools:layout="@layout/fragment_audio_config">
+        <action
+            android:id="@+id/action_audioConfigFragment_to_audioConfigBitrateFragment"
+            app:destination="@id/audioConfigBitrateFragment" />
+        <action
+            android:id="@+id/action_audioConfigFragment_to_audioConfigSamplerateFragment"
+            app:destination="@id/audioConfigSamplerateFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/videoConfigResolutionFragment"
+        android:name="com.anookday.rpistream.stream.settings.VideoConfigResolutionFragment"
+        android:label="VideoConfigResolutionFragment"
+        tools:layout="@layout/fragment_video_config_resolution" />
+    <fragment
+        android:id="@+id/videoConfigFpsFragment"
+        android:name="com.anookday.rpistream.stream.settings.VideoConfigFpsFragment"
+        android:label="VideoConfigFpsFragment"
+        tools:layout="@layout/fragment_video_config_fps" />
+    <fragment
+        android:id="@+id/videoConfigBitrateFragment"
+        android:name="com.anookday.rpistream.stream.settings.VideoConfigBitrateFragment"
+        android:label="VideoConfigBitrateFragment"
+        tools:layout="@layout/fragment_video_config_bitrate" />
+    <fragment
+        android:id="@+id/videoConfigIFrameFragment"
+        android:name="com.anookday.rpistream.stream.settings.VideoConfigIFrameFragment"
+        android:label="VideoConfigIFrameFragment"
+        tools:layout="@layout/fragment_video_config_iframe" />
+    <fragment
+        android:id="@+id/videoConfigRotationFragment"
+        android:name="com.anookday.rpistream.stream.settings.VideoConfigRotationFragment"
+        android:label="VideoConfigRotationFragment"
+        tools:layout="@layout/fragment_video_config_rotation" />
+    <fragment
+        android:id="@+id/audioConfigBitrateFragment"
+        android:name="com.anookday.rpistream.stream.settings.AudioConfigBitrateFragment"
+        android:label="AudioConfigBitrateFragment"
+        tools:layout="@layout/fragment_audio_config_bitrate" />
+    <fragment
+        android:id="@+id/audioConfigSamplerateFragment"
+        android:name="com.anookday.rpistream.stream.settings.AudioConfigSamplerateFragment"
+        android:label="AudioConfigSamplerateFragment"
+        tools:layout="@layout/fragment_audio_config_samplerate" />
+    <fragment
+        android:id="@+id/darkModeFragment"
+        android:name="com.anookday.rpistream.stream.settings.DarkModeFragment"
+        android:label="DarkModeFragment"
+        tools:layout="@layout/fragment_dark_mode" />
 
 </navigation>

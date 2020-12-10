@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <data>
+
+        <import type="android.view.View" />
+
+        <import type="kotlin.jvm.functions.Function1" />
+
+        <import type="kotlin.Unit" />
+
+        <variable
+            name="icon"
+            type="android.graphics.drawable.Drawable" />
+
+        <variable
+            name="title"
+            type="String" />
+
+        <variable
+            name="subtitle"
+            type="String" />
+
+        <variable
+            name="onClick"
+            type="Function1&lt;View, Unit>" />
+    </data>
+
+    <LinearLayout
+        style="@style/settingsItem"
+        android:onClick="@{(view) -> onClick.invoke(view)}">
+
+        <ImageView
+            android:id="@+id/settings_icon"
+            style="@style/settingsItem_icon"
+            android:src="@{icon}"
+            tools:src="@drawable/ic_baseline_bedtime_24" />
+
+        <LinearLayout
+            android:id="@+id/settings_body"
+            style="@style/settingsItem_body"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/settings_body_title"
+                style="@style/settingsItem_body__title"
+                android:text="@{title}"
+                tools:text="Dark Mode" />
+
+            <TextView
+                android:id="@+id/settings_body_subtitle"
+                style="@style/settingsItem_body__subtitle"
+                android:text="@{subtitle}"
+                android:visibility="@{subtitle.length > 0 ? View.VISIBLE : View.GONE}"
+                tools:text="Use System Settings" />
+        </LinearLayout>
+
+    </LinearLayout>
+
+</layout>

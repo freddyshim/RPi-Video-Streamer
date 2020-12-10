@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <RadioGroup
+        android:id="@+id/fps_radio_group"
+        style="@style/settingsRadioGroup">
+
+        <RadioButton
+            android:id="@+id/fps_24"
+            style="@style/settingsRadioButton"
+            android:text="@string/video_config_fps_24" />
+
+        <RadioButton
+            android:id="@+id/fps_30"
+            style="@style/settingsRadioButton"
+            android:text="@string/video_config_fps_30" />
+
+        <RadioButton
+            android:id="@+id/fps_60"
+            style="@style/settingsRadioButton"
+            android:text="@string/video_config_fps_60" />
+
+    </RadioGroup>
+
+</layout>

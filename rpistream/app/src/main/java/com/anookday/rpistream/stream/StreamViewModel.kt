@@ -7,6 +7,8 @@ import android.hardware.usb.UsbConstants
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbInterface
 import android.hardware.usb.UsbManager
+import android.view.View
+import android.widget.Toast
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
@@ -17,6 +19,7 @@ import com.anookday.rpistream.repository.database.AudioConfig
 import com.anookday.rpistream.repository.database.VideoConfig
 import com.anookday.rpistream.extensions.addNewItem
 import com.anookday.rpistream.oauth.TwitchManager
+import com.google.android.material.switchmaterial.SwitchMaterial
 import com.pedro.rtplibrary.util.BitrateAdapter
 import com.pedro.rtplibrary.view.OpenGlView
 import com.serenegiant.usb.USBMonitor
@@ -32,8 +35,22 @@ import timber.log.Timber
 enum class UsbConnectStatus { ATTACHED, DETACHED }
 enum class RtmpConnectStatus { SUCCESS, FAIL, DISCONNECT }
 enum class RtmpAuthStatus { SUCCESS, FAIL }
-enum class CurrentFragmentName { STREAM, ACCOUNT, SETTINGS }
 enum class ChatStatus { CONNECTED, DISCONNECTED, ERROR }
+enum class CurrentFragmentName {
+    STREAM,
+    ACCOUNT,
+    SETTINGS,
+    VIDEO_CONFIG,
+    VIDEO_CONFIG_RESOLUTION,
+    VIDEO_CONFIG_FPS,
+    VIDEO_CONFIG_BITRATE,
+    VIDEO_CONFIG_IFRAME,
+    VIDEO_CONFIG_ROTATION,
+    AUDIO_CONFIG,
+    AUDIO_CONFIG_BITRATE,
+    AUDIO_CONFIG_SAMPLERATE,
+    DARK_MODE
+}
 
 /**
  * ViewModel for [StreamActivity].
@@ -196,7 +213,10 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
                                 app.stopService(intent)
                                 _connectStatus.postValue(RtmpConnectStatus.DISCONNECT)
                             }
-                            StreamService.prepareStream(it.settings.videoConfig, it.settings.audioConfig) -> {
+                            StreamService.prepareStream(
+                                it.settings.videoConfig,
+                                it.settings.audioConfig
+                            ) -> {
                                 intent.putExtra("endpoint", streamEndpoint)
                                 app.startService(intent)
                                 _connectStatus.postValue(RtmpConnectStatus.SUCCESS)
@@ -217,7 +237,10 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
             val client = OkHttpClient()
             val request = Request.Builder().url("wss://irc-ws.chat.twitch.tv:443").build()
             val twitchChatListener =
-                TwitchChatListener(it.auth.accessToken, it.profile.displayName) { message: Message ->
+                TwitchChatListener(
+                    it.auth.accessToken,
+                    it.profile.displayName
+                ) { message: Message ->
                     _chatMessages.addNewItem(TwitchChatItem(message))
 
                     viewModelScope.launch {
@@ -236,7 +259,8 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
         user.value?.let {
             chatWebSocket?.apply {
                 send("PRIVMSG #${it.profile.displayName} :$text")
-                val message = Message.UserMessage(UserMessageType.VALID, it.profile.displayName, text)
+                val message =
+                    Message.UserMessage(UserMessageType.VALID, it.profile.displayName, text)
                 _chatMessages.addNewItem(TwitchChatItem(message))
             }
         }
@@ -282,6 +306,51 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
         }
     }
 
+    /*
+     * SETTINGS METHODS
+     */
+
+    fun updateVideoResolution(width: Int, height: Int) {
+        // TODO
+    }
+
+    fun updateVideoFps(fps: Int) {
+        // TODO
+    }
+
+    fun updateVideoBitrate(bitrate: Int) {
+        // TODO
+    }
+
+    fun updateVideoIFrame(iframe: Int) {
+        // TODO
+    }
+
+    fun updateVideoRotation(rotation: Int) {
+        // TODO
+    }
+
+    fun updateAudioBitrate(bitrate: Int) {
+        // TODO
+    }
+
+    fun updateAudioSamplerate(sampleRate: Int) {
+        // TODO
+    }
+
+    fun updateDarkMode(darkMode: String) {
+        // TODO
+    }
+
+    fun onDeveloperModeCheck(isChecked: Boolean) {
+        Toast.makeText(
+            app.applicationContext,
+            "Developer Mode: ${if (isChecked) "On" else "Off"}",
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+
+
     /**
      * deviceConnectListener object
      */
@@ -315,7 +384,12 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
             user.value?.let {
                 viewModelScope.launch {
                     try {
-                        _videoStatus.postValue(StreamService.enableCamera(ctrlBlock, it.settings.videoConfig))
+                        _videoStatus.postValue(
+                            StreamService.enableCamera(
+                                ctrlBlock,
+                                it.settings.videoConfig
+                            )
+                        )
                     } catch (e: IllegalArgumentException) {
                         disableCamera()
                     }

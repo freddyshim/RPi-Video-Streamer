@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <data>
+
+        <variable
+            name="model"
+            type="com.anookday.rpistream.stream.StreamViewModel" />
+
+    </data>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <include
+            android:id="@+id/bitrate_item"
+            style="@style/listItem"
+            layout="@layout/settings_item"
+            app:title="@{@string/audio_config_bitrate_title}" />
+
+        <include
+            android:id="@+id/samplerate_item"
+            style="@style/listItem"
+            layout="@layout/settings_item"
+            app:title="@{@string/audio_config_samplerate_title}" />
+
+        <include
+            android:id="@+id/stereo_item"
+            style="@style/listItem"
+            layout="@layout/settings_switch_item"
+            app:title="@{@string/audio_config_stereo_title}" />
+
+        <include
+            android:id="@+id/echo_canceler_item"
+            style="@style/listItem"
+            layout="@layout/settings_switch_item"
+            app:title="@{@string/audio_config_echocanceler_title}" />
+
+        <include
+            android:id="@+id/noise_suppressor_item"
+            style="@style/listItem"
+            layout="@layout/settings_switch_item"
+            app:title="@{@string/audio_config_noisesuppressor_title}" />
+
+
+    </LinearLayout>
+</layout>

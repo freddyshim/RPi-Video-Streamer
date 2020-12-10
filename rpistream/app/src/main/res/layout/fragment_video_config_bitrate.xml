@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+xmlns:app="http://schemas.android.com/apk/res-auto"
+xmlns:tools="http://schemas.android.com/tools">
+
+<RadioGroup
+    android:id="@+id/video_bitrate_radio_group"
+    style="@style/settingsRadioGroup">
+
+    <RadioButton
+        android:id="@+id/video_bitrate_2000"
+        style="@style/settingsRadioButton"
+        android:text="@string/video_config_bitrate_2000" />
+
+    <RadioButton
+        android:id="@+id/video_bitrate_4000"
+        style="@style/settingsRadioButton"
+        android:text="@string/video_config_bitrate_4000" />
+
+    <RadioButton
+        android:id="@+id/video_bitrate_6000"
+        style="@style/settingsRadioButton"
+        android:text="@string/video_config_bitrate_6000" />
+
+    <RadioButton
+        android:id="@+id/video_bitrate_8000"
+        style="@style/settingsRadioButton"
+        android:text="@string/video_config_bitrate_8000" />
+
+    <RadioButton
+        android:id="@+id/video_bitrate_10000"
+        style="@style/settingsRadioButton"
+        android:text="@string/video_config_bitrate_10000" />
+</RadioGroup>
+
+</layout>

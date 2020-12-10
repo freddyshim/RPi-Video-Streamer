@@ -6,6 +6,7 @@ import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.ViewModelProvider
 import com.anookday.rpistream.R
@@ -14,7 +15,7 @@ import com.anookday.rpistream.repository.database.User
 
 class AccountFragment: Fragment() {
     private lateinit var binding: FragmentAccountBinding
-    private lateinit var viewModel: StreamViewModel
+    private val viewModel: StreamViewModel by activityViewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -22,7 +23,7 @@ class AccountFragment: Fragment() {
         savedInstanceState: Bundle?
     ): View? {
         binding = FragmentAccountBinding.inflate(inflater, container, false)
-        viewModel = ViewModelProvider(requireActivity()).get(StreamViewModel::class.java).apply {
+        viewModel.apply {
             user.observe(viewLifecycleOwner, ::onUserChange)
         }
 

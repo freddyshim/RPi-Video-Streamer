@@ -74,7 +74,7 @@ object Network {
         .create(TwitchIngestService::class.java)
 
     val pigeonService: PigeonService = Retrofit.Builder()
-        .baseUrl("http://172.30.1.5:8000")
+        .baseUrl("http://172.30.1.39:8000")
         .client(client)
         .addConverterFactory(MoshiConverterFactory.create(moshi))
         .build()

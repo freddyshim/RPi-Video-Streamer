@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <data>
+
+        <variable
+            name="model"
+            type="com.anookday.rpistream.stream.StreamViewModel" />
+
+    </data>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <include
+            android:id="@+id/resolution_item"
+            style="@style/listItem"
+            layout="@layout/settings_item"
+            app:title="@{@string/video_config_resolution_title}" />
+
+        <include
+            android:id="@+id/fps_item"
+            style="@style/listItem"
+            layout="@layout/settings_item"
+            app:title="@{@string/video_config_fps_title}" />
+
+        <include
+            android:id="@+id/bitrate_item"
+            style="@style/listItem"
+            layout="@layout/settings_item"
+            app:title="@{@string/video_config_bitrate_title}" />
+
+        <include
+            android:id="@+id/iframe_interval_item"
+            style="@style/listItem"
+            layout="@layout/settings_item"
+            app:title="@{@string/video_config_iframe_title}" />
+
+        <include
+            android:id="@+id/rotation_item"
+            style="@style/listItem"
+            layout="@layout/settings_item"
+            app:title="@{@string/video_config_rotation_title}" />
+
+
+    </LinearLayout>
+</layout>

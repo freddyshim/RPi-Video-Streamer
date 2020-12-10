@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <RadioGroup
+        android:id="@+id/audio_bitrate_radio_group"
+        style="@style/settingsRadioGroup">
+
+        <RadioButton
+            android:id="@+id/audio_bitrate_64"
+            style="@style/settingsRadioButton"
+            android:text="@string/audio_config_bitrate_64" />
+
+        <RadioButton
+            android:id="@+id/audio_bitrate_128"
+            style="@style/settingsRadioButton"
+            android:text="@string/audio_config_bitrate_128" />
+
+        <RadioButton
+            android:id="@+id/audio_bitrate_256"
+            style="@style/settingsRadioButton"
+            android:text="@string/audio_config_bitrate_256" />
+
+        <RadioButton
+            android:id="@+id/audio_bitrate_512"
+            style="@style/settingsRadioButton"
+            android:text="@string/audio_config_bitrate_512" />
+
+    </RadioGroup>
+
+</layout>
