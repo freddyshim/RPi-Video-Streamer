@@ -22,9 +22,12 @@ open class UserViewModel(val app: Application): AndroidViewModel(app) {
     fun logout() {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
-                val logoutStatus = Network.pigeonService.logout()
-                if (logoutStatus.logout) {
-                    database.userDao.delete()
+                user.value?.let {
+                    Network.pigeonService.setUser(it.id, it.auth.accessToken, it.toNetwork())
+                    val logoutStatus = Network.pigeonService.logout()
+                    if (logoutStatus.logout) {
+                        database.userDao.delete()
+                    }
                 }
             }
         }

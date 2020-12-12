@@ -15,13 +15,10 @@ class LoginAuthenticationActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_login_authentication)
 
-        viewModel.user.observe(this, Observer { user ->
+        viewModel.user.observe(this, { user ->
             if (user != null) {
-                if (System.currentTimeMillis() > user.auth.tokenExpiryDate) {
-                    viewModel.logout()
-                } else {
-                    startActivity(Intent(this, StreamActivity::class.java))
-                }
+                startActivity(Intent(this, StreamActivity::class.java))
+                finish()
             }
         })
 
@@ -34,6 +31,7 @@ class LoginAuthenticationActivity : AppCompatActivity() {
                 val loginIntent = Intent(this, LoginActivity::class.java)
                 loginIntent.putExtra("error", getString(R.string.login_failed))
                 startActivity(loginIntent)
+                finish()
             }
         }
     }

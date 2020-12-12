@@ -27,6 +27,7 @@ import com.anookday.rpistream.chat.TwitchChatAdapter
 import com.anookday.rpistream.chat.TwitchChatItem
 import com.anookday.rpistream.databinding.FragmentStreamBinding
 import com.anookday.rpistream.repository.database.User
+import com.anookday.rpistream.util.Constants
 import kotlinx.android.synthetic.main.activity_stream.*
 import kotlinx.android.synthetic.main.fab_toggle_off.*
 import kotlinx.android.synthetic.main.fragment_stream.*
@@ -119,6 +120,7 @@ class StreamFragment : Fragment() {
             videoStatus.observe(viewLifecycleOwner, ::onVideoStatusChange)
             audioStatus.observe(viewLifecycleOwner, ::onAudioStatusChange)
             chatMessages.observe(viewLifecycleOwner, ::onChatMessagesChange)
+            videoBitrate.observe(viewLifecycleOwner, ::onVideoBitrateChange)
             user.observe(viewLifecycleOwner, ::onUserChange)
         }
     }
@@ -134,6 +136,14 @@ class StreamFragment : Fragment() {
             editNavigationDrawer(getString(R.string.app_name), true)
         }
         super.onResume()
+    }
+
+    override fun onStop() {
+        binding.cameraPreview.apply {
+            removeMediaCodecSurface()
+            stop()
+        }
+        super.onStop()
     }
 
     /**
@@ -271,6 +281,20 @@ class StreamFragment : Fragment() {
 
     private fun onChatMessagesChange(messages: MutableList<TwitchChatItem>) {
         chatAdapter.submitList(messages.toList())
+    }
+
+    private fun onVideoBitrateChange(bitrate: Long?) {
+        if (bitrate != null) {
+            video_bitrate_display.apply {
+                text = getString(R.string.video_bitrate_display, bitrate / Constants.KILOBYTE_SIZE)
+                visibility = View.VISIBLE
+            }
+        } else {
+            video_bitrate_display.apply {
+                text = null
+                visibility = View.INVISIBLE
+            }
+        }
     }
 
     private fun onUserChange(user: User?) {

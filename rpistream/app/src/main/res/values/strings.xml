@@ -28,6 +28,7 @@
     <string name="audio_fab_description">Button to toggle audio input</string>
     <string name="stream_fab_description">Button to toggle stream</string>
     <string name="menu_fab_description">Button to show and hide floating action buttons</string>
+    <string name="video_bitrate_display">Video bitrate: %1$d Kb/s</string>
     <!-- ACCOUNT -->
     <string name="form_username">Username</string>
     <string name="form_display_name">Display Name</string>
@@ -76,14 +77,14 @@
     <string name="audio_config_bitrate_128">128</string>
     <string name="audio_config_bitrate_256">256</string>
     <string name="audio_config_bitrate_512">512</string>
-    <string name="audio_config_samplerate_title">Sample Rate</string>
-    <string name="audio_config_samplerate_subtitle">%1$d Hz (recommended: 44100)</string>
-    <string name="audio_config_samplerate_32000">32,000 Hz</string>
-    <string name="audio_config_samplerate_44100">44,100 Hz</string>
-    <string name="audio_config_samplerate_48000">48,000 Hz</string>
+    <string name="audio_config_sample_rate_title">Sample Rate</string>
+    <string name="audio_config_sample_rate_subtitle">%1$d Hz (recommended: 44100)</string>
+    <string name="audio_config_sample_rate_32000">32,000 Hz</string>
+    <string name="audio_config_sample_rate_44100">44,100 Hz</string>
+    <string name="audio_config_sample_rate_48000">48,000 Hz</string>
     <string name="audio_config_stereo_title">Use Stereo</string>
-    <string name="audio_config_echocanceler_title">Use Echo Canceler</string>
-    <string name="audio_config_noisesuppressor_title">Use Noise Suppressor</string>
+    <string name="audio_config_echo_canceler_title">Use Echo Canceler</string>
+    <string name="audio_config_noise_suppressor_title">Use Noise Suppressor</string>
     <!-- DARK MODE CONFIG -->
     <string name="dark_mode_title">Dark Mode</string>
     <string name="dark_mode_on">On</string>

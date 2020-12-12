@@ -3,9 +3,7 @@ package com.anookday.rpistream.repository.database
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import com.anookday.rpistream.repository.network.NetworkAudioConfig
-import com.anookday.rpistream.repository.network.NetworkVideoConfig
-import com.anookday.rpistream.repository.network.TwitchUserSettings
+import com.anookday.rpistream.repository.network.*
 
 @Entity
 data class User(
@@ -13,7 +11,11 @@ data class User(
     @Embedded val profile: UserProfile,
     @Embedded val auth: UserAuth,
     @Embedded val settings: UserSettings
-)
+) {
+    fun toNetwork(): TwitchUser {
+        return TwitchUser(id, profile.toNetwork(), auth.toNetwork(), settings.toNetwork())
+    }
+}
 
 @Entity
 data class UserProfile(
@@ -22,14 +24,22 @@ data class UserProfile(
     val description: String,
     val email: String,
     val profileImage: String
-)
+) {
+    fun toNetwork(): TwitchUserProfile {
+        return TwitchUserProfile(login, displayName, description, email, profileImage)
+    }
+}
 
 @Entity
 data class UserAuth(
     val accessToken: String,
     val refreshToken: String,
     val tokenExpiryDate: Long
-)
+) {
+    fun toNetwork(): TwitchUserAuth {
+        return TwitchUserAuth(accessToken, refreshToken, tokenExpiryDate)
+    }
+}
 
 @Entity
 data class UserSettings(

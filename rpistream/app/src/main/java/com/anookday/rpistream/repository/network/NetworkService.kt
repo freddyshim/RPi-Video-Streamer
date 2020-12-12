@@ -1,15 +1,14 @@
 package com.anookday.rpistream.repository.network
 
 import com.anookday.rpistream.repository.database.User
+import com.anookday.rpistream.util.Constants
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
-import retrofit2.http.GET
-import retrofit2.http.Header
-import retrofit2.http.Query
+import retrofit2.http.*
 
 /**
  * Retrofit service for Twitch APIs.
@@ -40,6 +39,13 @@ interface PigeonService {
         @Header("User-id") id: String,
         @Header("Authorization") token: String
     ): TwitchUser
+
+    @POST("/user")
+    suspend fun setUser(
+        @Header("User-id") id: String,
+        @Header("Authorization") token: String,
+        @Body user: TwitchUser
+    )
 
     @GET("/auth/logout")
     suspend fun logout(): LogoutStatus
@@ -74,7 +80,7 @@ object Network {
         .create(TwitchIngestService::class.java)
 
     val pigeonService: PigeonService = Retrofit.Builder()
-        .baseUrl("http://172.30.1.39:8000")
+        .baseUrl(Constants.PP_HOST)
         .client(client)
         .addConverterFactory(MoshiConverterFactory.create(moshi))
         .build()

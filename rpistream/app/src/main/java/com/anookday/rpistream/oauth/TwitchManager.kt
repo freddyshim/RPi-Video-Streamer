@@ -24,7 +24,7 @@ class TwitchManager(private val context: Context, val database: UserDatabase) {
     suspend fun updateUserProfile(userId: String, accessToken: String) {
         withContext(Dispatchers.IO) {
             val user: User = Network.pigeonService.getUser(userId, accessToken).toDatabase()
-            database.userDao.updateUser(user)
+            database.userDao.deleteAndInsertUser(user)
         }
     }
 

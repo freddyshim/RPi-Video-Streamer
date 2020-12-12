@@ -4,23 +4,23 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <RadioGroup
-        android:id="@+id/audio_samplerate_radio_group"
+        android:id="@+id/audio_sample_rate_radio_group"
         style="@style/settingsRadioGroup">
 
         <RadioButton
-            android:id="@+id/audio_samplerate_32000"
+            android:id="@+id/audio_sample_rate_32000"
             style="@style/settingsRadioButton"
-            android:text="@string/audio_config_samplerate_32000" />
+            android:text="@string/audio_config_sample_rate_32000" />
 
         <RadioButton
-            android:id="@+id/audio_samplerate_44100"
+            android:id="@+id/audio_sample_rate_44100"
             style="@style/settingsRadioButton"
-            android:text="@string/audio_config_samplerate_44100" />
+            android:text="@string/audio_config_sample_rate_44100" />
 
         <RadioButton
-            android:id="@+id/audio_samplerate_48000"
+            android:id="@+id/audio_sample_rate_48000"
             style="@style/settingsRadioButton"
-            android:text="@string/audio_config_samplerate_48000" />
+            android:text="@string/audio_config_sample_rate_48000" />
 
     </RadioGroup>
 

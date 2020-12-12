@@ -33,11 +33,13 @@ class LandingActivity : AppCompatActivity() {
                     viewModel.logout()
                 } else {
                     startActivity(Intent(this@LandingActivity, StreamActivity::class.java))
+                    finish()
                 }
             } else {
                 lifecycleScope.launch {
                     delay(1000)
                     startActivity(Intent(this@LandingActivity, LoginActivity::class.java))
+                    finish()
                 }
             }
         })

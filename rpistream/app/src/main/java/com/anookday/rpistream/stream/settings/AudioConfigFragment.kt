@@ -28,7 +28,7 @@ class AudioConfigFragment: Fragment() {
             bitrateItem.onClick = { _ ->
                 findNavController().navigate(R.id.action_audioConfigFragment_to_audioConfigBitrateFragment)
             }
-            samplerateItem.onClick = { _ ->
+            sampleRateItem.onClick = { _ ->
                 findNavController().navigate(R.id.action_audioConfigFragment_to_audioConfigSamplerateFragment)
             }
         }
@@ -52,10 +52,25 @@ class AudioConfigFragment: Fragment() {
         user?.settings?.audioConfig?.let { config ->
             binding.apply {
                 bitrateItem.subtitle = getString(R.string.audio_config_bitrate_subtitle, config.bitrate / 1024)
-                samplerateItem.subtitle = getString(R.string.audio_config_samplerate_subtitle, config.sampleRate)
-                stereoItem.checked = config.stereo
-                echoCancelerItem.checked = config.echoCanceler
-                noiseSuppressorItem.checked = config.noiseSuppressor
+                sampleRateItem.subtitle = getString(R.string.audio_config_sample_rate_subtitle, config.sampleRate)
+                stereoItem.apply {
+                    checked = config.stereo
+                    onCheckedChanged = { isChecked ->
+                        viewModel.updateAudioStereo(isChecked)
+                    }
+                }
+                echoCancelerItem.apply {
+                    checked = config.echoCanceler
+                    onCheckedChanged = { isChecked ->
+                        viewModel.updateAudioEchoCanceler(isChecked)
+                    }
+                }
+                noiseSuppressorItem.apply {
+                    checked = config.noiseSuppressor
+                    onCheckedChanged = { isChecked ->
+                        viewModel.updateAudioNoiseSuppressor(isChecked)
+                    }
+                }
             }
         }
     }

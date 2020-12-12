@@ -23,10 +23,10 @@
             app:title="@{@string/audio_config_bitrate_title}" />
 
         <include
-            android:id="@+id/samplerate_item"
+            android:id="@+id/sample_rate_item"
             style="@style/listItem"
             layout="@layout/settings_item"
-            app:title="@{@string/audio_config_samplerate_title}" />
+            app:title="@{@string/audio_config_sample_rate_title}" />
 
         <include
             android:id="@+id/stereo_item"
@@ -38,13 +38,13 @@
             android:id="@+id/echo_canceler_item"
             style="@style/listItem"
             layout="@layout/settings_switch_item"
-            app:title="@{@string/audio_config_echocanceler_title}" />
+            app:title="@{@string/audio_config_echo_canceler_title}" />
 
         <include
             android:id="@+id/noise_suppressor_item"
             style="@style/listItem"
             layout="@layout/settings_switch_item"
-            app:title="@{@string/audio_config_noisesuppressor_title}" />
+            app:title="@{@string/audio_config_noise_suppressor_title}" />
 
 
     </LinearLayout>

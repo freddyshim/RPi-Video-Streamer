@@ -7,14 +7,14 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import com.anookday.rpistream.R
-import com.anookday.rpistream.databinding.FragmentAudioConfigSamplerateBinding
+import com.anookday.rpistream.databinding.FragmentAudioConfigSampleRateBinding
 import com.anookday.rpistream.repository.database.User
 import com.anookday.rpistream.stream.CurrentFragmentName
 import com.anookday.rpistream.stream.StreamActivity
 import com.anookday.rpistream.stream.StreamViewModel
 
-class AudioConfigSamplerateFragment: Fragment() {
-    private lateinit var binding: FragmentAudioConfigSamplerateBinding
+class AudioConfigSampleRateFragment: Fragment() {
+    private lateinit var binding: FragmentAudioConfigSampleRateBinding
     private val viewModel: StreamViewModel by activityViewModels()
 
     override fun onCreateView(
@@ -22,7 +22,7 @@ class AudioConfigSamplerateFragment: Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        binding = FragmentAudioConfigSamplerateBinding.inflate(inflater, container, false)
+        binding = FragmentAudioConfigSampleRateBinding.inflate(inflater, container, false)
         viewModel.apply {
             user.observe(viewLifecycleOwner, ::onUserChange)
         }
@@ -34,7 +34,7 @@ class AudioConfigSamplerateFragment: Fragment() {
         viewModel.setCurrentFragment(CurrentFragmentName.AUDIO_CONFIG_SAMPLERATE)
         (activity as StreamActivity).apply {
             supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_baseline_arrow_back_24)
-            editNavigationDrawer(getString(R.string.audio_config_samplerate_title), false)
+            editNavigationDrawer(getString(R.string.audio_config_sample_rate_title), false)
         }
         super.onResume()
     }
@@ -43,16 +43,16 @@ class AudioConfigSamplerateFragment: Fragment() {
         user?.settings?.audioConfig?.let { config ->
             binding.apply {
                 when (config.sampleRate) {
-                    32000 -> audioSamplerateRadioGroup.check(R.id.audio_samplerate_32000)
-                    44100 -> audioSamplerateRadioGroup.check(R.id.audio_samplerate_44100)
-                    48000 -> audioSamplerateRadioGroup.check(R.id.audio_samplerate_48000)
+                    32000 -> audioSampleRateRadioGroup.check(R.id.audio_sample_rate_32000)
+                    44100 -> audioSampleRateRadioGroup.check(R.id.audio_sample_rate_44100)
+                    48000 -> audioSampleRateRadioGroup.check(R.id.audio_sample_rate_48000)
                 }
 
-                audioSamplerateRadioGroup.setOnCheckedChangeListener { _, checkedId ->
+                audioSampleRateRadioGroup.setOnCheckedChangeListener { _, checkedId ->
                     when (checkedId) {
-                        R.id.audio_samplerate_32000 -> viewModel.updateAudioSamplerate(32000)
-                        R.id.audio_samplerate_44100 -> viewModel.updateAudioSamplerate(44100)
-                        R.id.audio_samplerate_48000 -> viewModel.updateAudioSamplerate(48000)
+                        R.id.audio_sample_rate_32000 -> viewModel.updateAudioSampleRate(32000)
+                        R.id.audio_sample_rate_44100 -> viewModel.updateAudioSampleRate(44100)
+                        R.id.audio_sample_rate_48000 -> viewModel.updateAudioSampleRate(48000)
                     }
                 }
             }

@@ -13,6 +13,7 @@ import com.anookday.rpistream.repository.database.User
 import com.anookday.rpistream.stream.CurrentFragmentName
 import com.anookday.rpistream.stream.StreamActivity
 import com.anookday.rpistream.stream.StreamViewModel
+import timber.log.Timber
 
 class SettingsFragment: Fragment() {
     private lateinit var binding: FragmentSettingsBinding
@@ -24,7 +25,6 @@ class SettingsFragment: Fragment() {
         savedInstanceState: Bundle?
     ): View? {
         binding = FragmentSettingsBinding.inflate(inflater, container, false).apply {
-            model = viewModel
             videoConfigItem.onClick = { _ ->
                 findNavController().navigate(R.id.action_settingsFragment_to_videoConfigFragment)
             }
@@ -52,15 +52,24 @@ class SettingsFragment: Fragment() {
     }
 
     private fun onUserChange(user: User?) {
-        user?.settings?.let {
+        user?.settings?.let { settings ->
             binding.apply {
-                settings = it
-                when (it.darkMode) {
+                when (settings.darkMode) {
                     DarkMode.ON.value -> darkModeItem.subtitle = getString(R.string.dark_mode_on)
                     DarkMode.OFF.value -> darkModeItem.subtitle = getString(R.string.dark_mode_off)
                     DarkMode.SYSTEM.value -> darkModeItem.subtitle = getString(R.string.dark_mode_system)
                 }
+                developerModeItem.apply {
+                    checked = settings.developerMode
+                    onCheckedChanged = { isChecked ->
+                        viewModel.updateDeveloperMode(isChecked)
+                    }
+                }
             }
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
     }
 }

@@ -21,6 +21,7 @@ import com.anookday.rpistream.extensions.addNewItem
 import com.anookday.rpistream.oauth.TwitchManager
 import com.google.android.material.switchmaterial.SwitchMaterial
 import com.pedro.rtplibrary.util.BitrateAdapter
+import com.pedro.rtplibrary.view.GlInterface
 import com.pedro.rtplibrary.view.OpenGlView
 import com.serenegiant.usb.USBMonitor
 import kotlinx.coroutines.Dispatchers
@@ -107,6 +108,10 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
     val chatMessages: LiveData<MutableList<TwitchChatItem>>
         get() = _chatMessages
 
+    private val _videoBitrate = MutableLiveData<Long?>()
+    val videoBitrate: LiveData<Long?>
+        get() = _videoBitrate
+
     /**
      * Initialize required LiveData variables.
      *
@@ -133,6 +138,10 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
         viewModelScope.launch {
             usbMonitor?.unregister()
         }
+    }
+
+    fun setGlInterface(glInterface: GlInterface) {
+        StreamService.setGlInterface(glInterface)
     }
 
     /**
@@ -311,43 +320,123 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
      */
 
     fun updateVideoResolution(width: Int, height: Int) {
-        // TODO
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                user.value?.id?.let { id ->
+                    database.userDao.updateVideoResolution(id, width, height)
+                }
+            }
+        }
     }
 
     fun updateVideoFps(fps: Int) {
-        // TODO
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                user.value?.id?.let { id ->
+                    database.userDao.updateVideoFps(id, fps)
+                }
+            }
+        }
     }
 
     fun updateVideoBitrate(bitrate: Int) {
-        // TODO
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                user.value?.id?.let { id ->
+                    database.userDao.updateVideoBitrate(id, bitrate)
+                }
+            }
+        }
     }
 
     fun updateVideoIFrame(iframe: Int) {
-        // TODO
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                user.value?.id?.let { id ->
+                    database.userDao.updateVideoIFrame(id, iframe)
+                }
+            }
+        }
     }
 
     fun updateVideoRotation(rotation: Int) {
-        // TODO
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                user.value?.id?.let { id ->
+                    database.userDao.updateVideoRotation(id, rotation)
+                }
+            }
+        }
     }
 
     fun updateAudioBitrate(bitrate: Int) {
-        // TODO
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                user.value?.id?.let { id ->
+                    database.userDao.updateAudioBitrate(id, bitrate)
+                }
+            }
+        }
     }
 
-    fun updateAudioSamplerate(sampleRate: Int) {
-        // TODO
+    fun updateAudioSampleRate(sampleRate: Int) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                user.value?.id?.let { id ->
+                    database.userDao.updateAudioSampleRate(id, sampleRate)
+                }
+            }
+        }
+    }
+
+    fun updateAudioStereo(stereo: Boolean) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                user.value?.id?.let { id ->
+                    database.userDao.updateAudioStereo(id, stereo)
+                }
+            }
+        }
+    }
+
+    fun updateAudioEchoCanceler(echoCanceler: Boolean) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                user.value?.id?.let { id ->
+                    database.userDao.updateAudioEchoCanceler(id, echoCanceler)
+                }
+            }
+        }
+    }
+
+    fun updateAudioNoiseSuppressor(noiseSuppressor: Boolean) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                user.value?.id?.let { id ->
+                    database.userDao.updateAudioNoiseSuppressor(id, noiseSuppressor)
+                }
+            }
+        }
     }
 
     fun updateDarkMode(darkMode: String) {
-        // TODO
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                user.value?.id?.let { id ->
+                    database.userDao.updateDarkMode(id, darkMode)
+                }
+            }
+        }
     }
 
-    fun onDeveloperModeCheck(isChecked: Boolean) {
-        Toast.makeText(
-            app.applicationContext,
-            "Developer Mode: ${if (isChecked) "On" else "Off"}",
-            Toast.LENGTH_SHORT
-        ).show()
+    fun updateDeveloperMode(developerMode: Boolean) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                user.value?.id?.let { id ->
+                    database.userDao.updateDeveloperMode(id, developerMode)
+                }
+            }
+        }
     }
 
 
@@ -453,6 +542,11 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
         }
 
         override fun onNewBitrateRtmp(bitrate: Long) {
+            user.value?.settings?.let { settings ->
+                if (settings.developerMode) {
+                    _videoBitrate.postValue(bitrate)
+                }
+            }
             bitrateAdapter?.adaptBitrate(bitrate)
         }
 
@@ -461,6 +555,7 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
         }
 
         override fun onDisconnectRtmp() {
+            _videoBitrate.postValue(null)
             _connectStatus.postValue(RtmpConnectStatus.DISCONNECT)
         }
     }

@@ -102,9 +102,9 @@
         tools:layout="@layout/fragment_audio_config_bitrate" />
     <fragment
         android:id="@+id/audioConfigSamplerateFragment"
-        android:name="com.anookday.rpistream.stream.settings.AudioConfigSamplerateFragment"
+        android:name="com.anookday.rpistream.stream.settings.AudioConfigSampleRateFragment"
         android:label="AudioConfigSamplerateFragment"
-        tools:layout="@layout/fragment_audio_config_samplerate" />
+        tools:layout="@layout/fragment_audio_config_sample_rate" />
     <fragment
         android:id="@+id/darkModeFragment"
         android:name="com.anookday.rpistream.stream.settings.DarkModeFragment"

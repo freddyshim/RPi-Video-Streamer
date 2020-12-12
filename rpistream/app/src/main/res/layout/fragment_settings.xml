@@ -3,17 +3,6 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <data>
-
-        <variable
-            name="settings"
-            type="com.anookday.rpistream.repository.database.UserSettings" />
-
-        <variable
-            name="model"
-            type="com.anookday.rpistream.stream.StreamViewModel" />
-    </data>
-
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -46,9 +35,7 @@
             style="@style/listItem"
             app:icon="@{@drawable/ic_baseline_code_24}"
             app:title="@{@string/developer_mode_title}"
-            app:subtitle="@{@string/developer_mode_subtitle}"
-            app:checked="@{settings.developerMode}"
-            app:onCheckedChanged="@{model.onDeveloperModeCheck}" />
+            app:subtitle="@{@string/developer_mode_subtitle}" />
 
     </LinearLayout>
 

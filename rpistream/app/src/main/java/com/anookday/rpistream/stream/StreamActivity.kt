@@ -105,8 +105,8 @@ class StreamActivity : AppCompatActivity() {
 
     override fun onBackPressed() {
         val currentFragment = supportFragmentManager.findFragmentById(R.id.navHostFragment)
-        when (currentFragment!!::class) {
-            StreamFragment::class -> {
+        when (viewModel.currentFragment.value) {
+            CurrentFragmentName.STREAM -> {
                 val streamWarning =
                     if (viewModel.connectStatus.value == RtmpConnectStatus.SUCCESS) " Your current stream will end." else ""
                 AlertDialog.Builder(this, R.style.AlertDialogStyle)
@@ -118,19 +118,6 @@ class StreamActivity : AppCompatActivity() {
             }
             else -> super.onBackPressed()
         }
-//        when (viewModel.currentFragment.value) {
-//            CurrentFragmentName.STREAM -> {
-//                val streamWarning =
-//                    if (viewModel.connectStatus.value == RtmpConnectStatus.SUCCESS) " Your current stream will end." else ""
-//                AlertDialog.Builder(this, R.style.AlertDialogStyle)
-//                    .setMessage("Are you sure you want to exit?$streamWarning")
-//                    .setCancelable(false)
-//                    .setPositiveButton("Yes") { _, _ -> exitApp() }
-//                    .setNegativeButton("No", null)
-//                    .show()
-//            }
-//            else -> super.onBackPressed()
-//        }
     }
 
     private fun exitApp() {

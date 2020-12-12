@@ -13,6 +13,7 @@ import androidx.lifecycle.viewModelScope
 import com.anookday.rpistream.R
 import com.anookday.rpistream.UserViewModel
 import com.anookday.rpistream.oauth.TwitchManager
+import com.anookday.rpistream.util.Constants
 import kotlinx.coroutines.launch
 
 class LoginViewModel(app: Application): UserViewModel(app) {
@@ -50,7 +51,7 @@ class LoginViewModel(app: Application): UserViewModel(app) {
                 super.onPostMessage(message, extras)
             }
         })
-        val url = "${context.getString(R.string.auth_host)}${context.getString(R.string.auth_path)}"
+        val url = "${Constants.PP_HOST}${Constants.PP_AUTH}"
         val customTabsIntent = CustomTabsIntent.Builder(session).build()
         customTabsClient?.warmup(0)
         customTabsIntent.launchUrl(context, Uri.parse(url))
