@@ -14,7 +14,7 @@ import com.anookday.rpistream.stream.CurrentFragmentName
 import com.anookday.rpistream.stream.StreamActivity
 import com.anookday.rpistream.stream.StreamViewModel
 
-class VideoConfigFragment: Fragment() {
+class VideoConfigFragment : Fragment() {
     private lateinit var binding: FragmentVideoConfigBinding
     private val viewModel: StreamViewModel by activityViewModels()
 
@@ -50,20 +50,28 @@ class VideoConfigFragment: Fragment() {
 
     override fun onResume() {
         viewModel.setCurrentFragment(CurrentFragmentName.VIDEO_CONFIG)
-        (activity as StreamActivity).apply {
-            supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_baseline_arrow_back_24)
-            editNavigationDrawer(getString(R.string.video_config_title), false)
-        }
+
+        (activity as StreamActivity).editNavigationDrawer(
+            R.string.video_config_title,
+            R.drawable.ic_baseline_arrow_back_24,
+            false
+        )
         super.onResume()
     }
 
     private fun onUserChange(user: User?) {
         user?.settings?.videoConfig?.let { config ->
             binding.apply {
-                resolutionItem.subtitle = getString(R.string.video_config_resolution_subtitle, config.width, config.height)
+                resolutionItem.subtitle = getString(
+                    R.string.video_config_resolution_subtitle,
+                    config.width,
+                    config.height
+                )
                 fpsItem.subtitle = config.fps.toString()
-                bitrateItem.subtitle = getString(R.string.video_config_bitrate_subtitle, config.bitrate / 1024)
-                iframeIntervalItem.subtitle = getString(R.string.video_config_iframe_subtitle, config.iFrameInterval)
+                bitrateItem.subtitle =
+                    getString(R.string.video_config_bitrate_subtitle, config.bitrate / 1024)
+                iframeIntervalItem.subtitle =
+                    getString(R.string.video_config_iframe_subtitle, config.iFrameInterval)
                 rotationItem.subtitle = config.rotation.toString()
             }
         }

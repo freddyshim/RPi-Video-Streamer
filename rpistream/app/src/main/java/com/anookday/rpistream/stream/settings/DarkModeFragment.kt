@@ -19,7 +19,7 @@ enum class DarkMode(val value: String) {
     SYSTEM("system")
 }
 
-class DarkModeFragment: Fragment() {
+class DarkModeFragment : Fragment() {
     private lateinit var binding: FragmentDarkModeBinding
     private val viewModel: StreamViewModel by activityViewModels()
 
@@ -38,10 +38,11 @@ class DarkModeFragment: Fragment() {
 
     override fun onResume() {
         viewModel.setCurrentFragment(CurrentFragmentName.DARK_MODE)
-        (activity as StreamActivity).apply {
-            supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_baseline_arrow_back_24)
-            editNavigationDrawer(getString(R.string.dark_mode_title), false)
-        }
+        (activity as StreamActivity).editNavigationDrawer(
+            R.string.dark_mode_title,
+            R.drawable.ic_baseline_arrow_back_24,
+            false
+        )
         super.onResume()
     }
 

@@ -13,7 +13,7 @@ import com.anookday.rpistream.stream.CurrentFragmentName
 import com.anookday.rpistream.stream.StreamActivity
 import com.anookday.rpistream.stream.StreamViewModel
 
-class VideoConfigRotationFragment: Fragment() {
+class VideoConfigRotationFragment : Fragment() {
 
     private lateinit var binding: FragmentVideoConfigRotationBinding
     private val viewModel: StreamViewModel by activityViewModels()
@@ -33,10 +33,11 @@ class VideoConfigRotationFragment: Fragment() {
 
     override fun onResume() {
         viewModel.setCurrentFragment(CurrentFragmentName.VIDEO_CONFIG_ROTATION)
-        (activity as StreamActivity).apply {
-            supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_baseline_arrow_back_24)
-            editNavigationDrawer(getString(R.string.video_config_rotation_title), false)
-        }
+        (activity as StreamActivity).editNavigationDrawer(
+            R.string.video_config_rotation_title,
+            R.drawable.ic_baseline_arrow_back_24,
+            false
+        )
         super.onResume()
     }
 

@@ -44,15 +44,18 @@ class StreamActivity : AppCompatActivity() {
                 when (it.itemId) {
                     R.id.nav_account -> {
                         appContainer.closeDrawers()
+                        viewModel.prepareNavigation()
                         navController.navigate(R.id.action_streamFragment_to_accountFragment)
                         true
                     }
                     R.id.nav_settings -> {
                         appContainer.closeDrawers()
+                        viewModel.prepareNavigation()
                         navController.navigate(R.id.action_streamFragment_to_settingsFragment)
                         true
                     }
                     R.id.nav_logout -> {
+                        viewModel.prepareNavigation()
                         lifecycleScope.launch {
                             viewModel.logout()
                         }
@@ -81,9 +84,7 @@ class StreamActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        if (StreamService.isStreaming) {
-            application.stopService(Intent(applicationContext, StreamService::class.java))
-        }
+        viewModel.prepareNavigation()
         viewModel.unregisterUsbMonitor()
         viewModel.disableCamera()
         viewModel.destroyUsbMonitor()
@@ -108,7 +109,7 @@ class StreamActivity : AppCompatActivity() {
         when (viewModel.currentFragment.value) {
             CurrentFragmentName.STREAM -> {
                 val streamWarning =
-                    if (viewModel.connectStatus.value == RtmpConnectStatus.SUCCESS) " Your current stream will end." else ""
+                    if (StreamService.isStreaming) " Your current stream will end." else ""
                 AlertDialog.Builder(this, R.style.AlertDialogStyle)
                     .setMessage("Are you sure you want to exit?$streamWarning")
                     .setCancelable(false)
@@ -121,18 +122,23 @@ class StreamActivity : AppCompatActivity() {
     }
 
     private fun exitApp() {
-        moveTaskToBack(true)
+        viewModel.prepareNavigation()
         finish()
     }
 
-    fun editNavigationDrawer(title: String, enableDrawer: Boolean) {
-        supportActionBar?.title = title
-        val drawerLockMode =
+    fun editNavigationDrawer(barTitle: Int, button: Int?, enableDrawer: Boolean) {
+        supportActionBar?.apply {
+            title = getString(barTitle)
+            setDisplayHomeAsUpEnabled(button != null)
+            if (button != null) setHomeAsUpIndicator(button)
+        }
+
+        binding.appContainer.setDrawerLockMode(
             if (enableDrawer) {
                 DrawerLayout.LOCK_MODE_UNLOCKED
             } else {
                 DrawerLayout.LOCK_MODE_LOCKED_CLOSED
             }
-        binding.appContainer.setDrawerLockMode(drawerLockMode)
+        )
     }
 }

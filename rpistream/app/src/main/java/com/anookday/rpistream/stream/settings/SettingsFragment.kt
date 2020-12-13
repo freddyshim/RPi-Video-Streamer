@@ -15,7 +15,7 @@ import com.anookday.rpistream.stream.StreamActivity
 import com.anookday.rpistream.stream.StreamViewModel
 import timber.log.Timber
 
-class SettingsFragment: Fragment() {
+class SettingsFragment : Fragment() {
     private lateinit var binding: FragmentSettingsBinding
     private val viewModel: StreamViewModel by activityViewModels()
 
@@ -44,10 +44,11 @@ class SettingsFragment: Fragment() {
 
     override fun onResume() {
         viewModel.setCurrentFragment(CurrentFragmentName.SETTINGS)
-        (activity as StreamActivity).apply {
-            supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_baseline_arrow_back_24)
-            editNavigationDrawer(getString(R.string.settings_title), false)
-        }
+        (activity as StreamActivity).editNavigationDrawer(
+            R.string.settings_title,
+            R.drawable.ic_baseline_arrow_back_24,
+            false
+        )
         super.onResume()
     }
 
@@ -57,7 +58,8 @@ class SettingsFragment: Fragment() {
                 when (settings.darkMode) {
                     DarkMode.ON.value -> darkModeItem.subtitle = getString(R.string.dark_mode_on)
                     DarkMode.OFF.value -> darkModeItem.subtitle = getString(R.string.dark_mode_off)
-                    DarkMode.SYSTEM.value -> darkModeItem.subtitle = getString(R.string.dark_mode_system)
+                    DarkMode.SYSTEM.value -> darkModeItem.subtitle =
+                        getString(R.string.dark_mode_system)
                 }
                 developerModeItem.apply {
                     checked = settings.developerMode

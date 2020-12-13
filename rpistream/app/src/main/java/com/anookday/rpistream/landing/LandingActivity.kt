@@ -32,7 +32,9 @@ class LandingActivity : AppCompatActivity() {
                 if (System.currentTimeMillis() > user.auth.tokenExpiryDate) {
                     viewModel.logout()
                 } else {
-                    startActivity(Intent(this@LandingActivity, StreamActivity::class.java))
+                    val streamIntent = Intent(this, StreamActivity::class.java)
+                    streamIntent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
+                    startActivity(streamIntent)
                     finish()
                 }
             } else {

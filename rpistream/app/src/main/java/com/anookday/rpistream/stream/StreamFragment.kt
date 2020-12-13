@@ -86,6 +86,7 @@ class StreamFragment : Fragment() {
         fabConstraintOn = ConstraintSet().apply { clone(context, R.layout.fab_toggle_on) }
         fabConstraintOff = ConstraintSet().apply { clone(context, R.layout.fab_toggle_off) }
         fabTransition = ChangeBounds().apply { interpolator = OvershootInterpolator(1.0F) }
+        isMenuPressed = false
 
         binding = FragmentStreamBinding.inflate(inflater, container, false).apply {
             chatMessages.apply {
@@ -131,10 +132,11 @@ class StreamFragment : Fragment() {
 
     override fun onResume() {
         viewModel.setCurrentFragment(CurrentFragmentName.STREAM)
-        (activity as StreamActivity).apply {
-            supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_baseline_menu_24)
-            editNavigationDrawer(getString(R.string.app_name), true)
-        }
+        (activity as StreamActivity).editNavigationDrawer(
+            R.string.app_name,
+            R.drawable.ic_baseline_menu_24,
+            true
+        )
         super.onResume()
     }
 
@@ -165,7 +167,7 @@ class StreamFragment : Fragment() {
         } else {
             fabConstraintOff.applyTo(fab_container)
         }
-        ObjectAnimator.ofFloat(main_dimmed_bg, "alpha", alpha).apply{
+        ObjectAnimator.ofFloat(main_dimmed_bg, "alpha", alpha).apply {
             duration = 300
             start()
         }
@@ -176,7 +178,10 @@ class StreamFragment : Fragment() {
     }
 
     private fun onAudioFabClick(view: View) {
-        when (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.RECORD_AUDIO)) {
+        when (ContextCompat.checkSelfPermission(
+            requireContext(),
+            Manifest.permission.RECORD_AUDIO
+        )) {
             PackageManager.PERMISSION_GRANTED -> {
                 viewModel.toggleAudio()
             }
@@ -224,6 +229,11 @@ class StreamFragment : Fragment() {
                     stream_fab.backgroundTintList = ColorStateList.valueOf(
                         ContextCompat.getColor(requireContext(), R.color.colorAccent)
                     )
+                    (activity as StreamActivity).editNavigationDrawer(
+                        R.string.currently_streaming_title,
+                        null,
+                        false
+                    )
                     showMessage("Connection success")
                 }
                 RtmpConnectStatus.FAIL -> showMessage("Connection failed")
@@ -231,6 +241,11 @@ class StreamFragment : Fragment() {
                     stream_fab_text.text = getText(R.string.stream_off_text)
                     stream_fab.backgroundTintList = ColorStateList.valueOf(
                         ContextCompat.getColor(requireContext(), R.color.colorPrimary)
+                    )
+                    (activity as StreamActivity).editNavigationDrawer(
+                        R.string.app_name,
+                        R.drawable.ic_baseline_menu_24,
+                        true
                     )
                     showMessage("Disconnected")
                 }
@@ -299,7 +314,8 @@ class StreamFragment : Fragment() {
 
     private fun onUserChange(user: User?) {
         when (viewModel.chatStatus.value) {
-            ChatStatus.CONNECTED -> {}
+            ChatStatus.CONNECTED -> {
+            }
             else -> viewModel.connectToChat()
         }
     }

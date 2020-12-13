@@ -10,6 +10,7 @@ import com.anookday.rpistream.repository.network.Network
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import timber.log.Timber
 
 /**
  * Generic view model class with access to user database.
@@ -23,9 +24,12 @@ open class UserViewModel(val app: Application): AndroidViewModel(app) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 user.value?.let {
-                    Network.pigeonService.setUser(it.id, it.auth.accessToken, it.toNetwork())
-                    val logoutStatus = Network.pigeonService.logout()
-                    if (logoutStatus.logout) {
+                    try {
+                        Network.pigeonService.setUser(it.id, it.auth.accessToken, it.toNetwork())
+                        Network.pigeonService.logout()
+                    } catch (e: Exception) {
+                        Timber.e(e)
+                    } finally {
                         database.userDao.delete()
                     }
                 }

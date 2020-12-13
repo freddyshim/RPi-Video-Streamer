@@ -17,7 +17,6 @@ class LoginAuthenticationActivity : AppCompatActivity() {
 
         viewModel.user.observe(this, { user ->
             if (user != null) {
-                startActivity(Intent(this, StreamActivity::class.java))
                 finish()
             }
         })
@@ -29,7 +28,7 @@ class LoginAuthenticationActivity : AppCompatActivity() {
                 viewModel.completeLogin(id, token)
             } else {
                 val loginIntent = Intent(this, LoginActivity::class.java)
-                loginIntent.putExtra("error", getString(R.string.login_failed))
+                loginIntent.putExtra("ERROR", getString(R.string.login_failed))
                 startActivity(loginIntent)
                 finish()
             }

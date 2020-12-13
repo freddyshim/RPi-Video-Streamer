@@ -13,7 +13,7 @@ import com.anookday.rpistream.R
 import com.anookday.rpistream.databinding.FragmentAccountBinding
 import com.anookday.rpistream.repository.database.User
 
-class AccountFragment: Fragment() {
+class AccountFragment : Fragment() {
     private lateinit var binding: FragmentAccountBinding
     private val viewModel: StreamViewModel by activityViewModels()
 
@@ -32,10 +32,11 @@ class AccountFragment: Fragment() {
 
     override fun onResume() {
         viewModel.setCurrentFragment(CurrentFragmentName.ACCOUNT)
-        (activity as StreamActivity).apply {
-            supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_baseline_arrow_back_24)
-            editNavigationDrawer(getString(R.string.account_title), false)
-        }
+        (activity as StreamActivity).editNavigationDrawer(
+            R.string.account_title,
+            R.drawable.ic_baseline_arrow_back_24,
+            false
+        )
         super.onResume()
     }
 

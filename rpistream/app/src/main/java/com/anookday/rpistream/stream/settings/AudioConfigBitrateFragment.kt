@@ -15,7 +15,7 @@ import com.anookday.rpistream.stream.StreamActivity
 import com.anookday.rpistream.stream.StreamViewModel
 import com.anookday.rpistream.util.Constants
 
-class AudioConfigBitrateFragment: Fragment() {
+class AudioConfigBitrateFragment : Fragment() {
     private lateinit var binding: FragmentAudioConfigBitrateBinding
     private val viewModel: StreamViewModel by activityViewModels()
 
@@ -34,10 +34,11 @@ class AudioConfigBitrateFragment: Fragment() {
 
     override fun onResume() {
         viewModel.setCurrentFragment(CurrentFragmentName.AUDIO_CONFIG_BITRATE)
-        (activity as StreamActivity).apply {
-            supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_baseline_arrow_back_24)
-            editNavigationDrawer(getString(R.string.audio_config_bitrate_title), false)
-        }
+        (activity as StreamActivity).editNavigationDrawer(
+            R.string.audio_config_bitrate_title,
+            R.drawable.ic_baseline_arrow_back_24,
+            false
+        )
         super.onResume()
     }
 

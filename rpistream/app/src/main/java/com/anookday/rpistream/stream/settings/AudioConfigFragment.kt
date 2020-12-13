@@ -14,7 +14,7 @@ import com.anookday.rpistream.stream.CurrentFragmentName
 import com.anookday.rpistream.stream.StreamActivity
 import com.anookday.rpistream.stream.StreamViewModel
 
-class AudioConfigFragment: Fragment() {
+class AudioConfigFragment : Fragment() {
     private lateinit var binding: FragmentAudioConfigBinding
     private val viewModel: StreamViewModel by activityViewModels()
 
@@ -41,18 +41,21 @@ class AudioConfigFragment: Fragment() {
 
     override fun onResume() {
         viewModel.setCurrentFragment(CurrentFragmentName.AUDIO_CONFIG)
-        (activity as StreamActivity).apply {
-            supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_baseline_arrow_back_24)
-            editNavigationDrawer(getString(R.string.audio_config_title), false)
-        }
+        (activity as StreamActivity).editNavigationDrawer(
+            R.string.audio_config_title,
+            R.drawable.ic_baseline_arrow_back_24,
+            false
+        )
         super.onResume()
     }
 
     private fun onUserChange(user: User?) {
         user?.settings?.audioConfig?.let { config ->
             binding.apply {
-                bitrateItem.subtitle = getString(R.string.audio_config_bitrate_subtitle, config.bitrate / 1024)
-                sampleRateItem.subtitle = getString(R.string.audio_config_sample_rate_subtitle, config.sampleRate)
+                bitrateItem.subtitle =
+                    getString(R.string.audio_config_bitrate_subtitle, config.bitrate / 1024)
+                sampleRateItem.subtitle =
+                    getString(R.string.audio_config_sample_rate_subtitle, config.sampleRate)
                 stereoItem.apply {
                     checked = config.stereo
                     onCheckedChanged = { isChecked ->

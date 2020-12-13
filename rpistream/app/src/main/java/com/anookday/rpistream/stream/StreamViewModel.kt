@@ -176,14 +176,16 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
      * Connect to UVCCamera if video is disabled. Otherwise, disable video.
      */
     fun toggleVideo() {
-        if (videoStatus.value == null) {
-            val deviceList = usbManager.deviceList
-            if (deviceList.isNotEmpty()) {
-                val device: UsbDevice = deviceList.values.elementAt(0)
-                usbMonitor?.requestPermission(device)
+        if (!StreamService.isStreaming) {
+            if (videoStatus.value == null) {
+                val deviceList = usbManager.deviceList
+                if (deviceList.isNotEmpty()) {
+                    val device: UsbDevice = deviceList.values.elementAt(0)
+                    usbMonitor?.requestPermission(device)
+                }
+            } else {
+                disableCamera()
             }
-        } else {
-            disableCamera()
         }
     }
 
@@ -191,12 +193,14 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
      * Enable or disable audio recording.
      */
     fun toggleAudio() {
-        if (_audioStatus.value == null) {
-            _audioStatus.value = app.getString(R.string.audio_on_text)
-            StreamService.enableAudio()
-        } else {
-            _audioStatus.value = null
-            StreamService.disableAudio()
+        if (!StreamService.isStreaming) {
+            if (_audioStatus.value == null) {
+                _audioStatus.value = app.getString(R.string.audio_on_text)
+                StreamService.enableAudio()
+            } else {
+                _audioStatus.value = null
+                StreamService.disableAudio()
+            }
         }
     }
 
@@ -213,29 +217,37 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
             withContext(Dispatchers.IO) {
                 // only logged in users can toggle stream
                 user.value?.let {
-                    val streamEndpoint: String? =
-                        twitchManager.getIngestEndpoint(it.id, it.auth.accessToken)
-                    if (streamEndpoint != null) {
-                        val intent = Intent(app.applicationContext, StreamService::class.java)
-                        when {
-                            StreamService.isStreaming -> {
-                                app.stopService(intent)
-                                _connectStatus.postValue(RtmpConnectStatus.DISCONNECT)
-                            }
-                            StreamService.prepareStream(
-                                it.settings.videoConfig,
-                                it.settings.audioConfig
-                            ) -> {
-                                intent.putExtra("endpoint", streamEndpoint)
-                                app.startService(intent)
-                                _connectStatus.postValue(RtmpConnectStatus.SUCCESS)
-                            }
-                            else -> _connectStatus.postValue(RtmpConnectStatus.FAIL)
+                    val intent = Intent(app.applicationContext, StreamService::class.java)
+                    if (StreamService.isStreaming) {
+                        app.stopService(intent)
+                        _connectStatus.postValue(RtmpConnectStatus.DISCONNECT)
+                    } else if (StreamService.prepareStream(it.settings.videoConfig, it.settings.audioConfig)) {
+                        val streamEndpoint = twitchManager.getIngestEndpoint(it.id, it.auth.accessToken)
+                        if (streamEndpoint != null) {
+                            intent.putExtra("endpoint", streamEndpoint)
+                            app.startService(intent)
+                            _connectStatus.postValue(RtmpConnectStatus.SUCCESS)
                         }
+                    } else {
+                        _connectStatus.postValue(RtmpConnectStatus.FAIL)
                     }
                 }
             }
         }
+    }
+
+    /**
+     * Disable streaming and video preview. Called before navigating to another activity/fragment.
+     */
+    fun prepareNavigation() {
+        if (StreamService.isPreview) {
+            toggleVideo()
+        }
+        if (StreamService.isStreaming) {
+            toggleStream()
+        }
+        _audioStatus.value = null
+        StreamService.disableAudio()
     }
 
     /**
