@@ -23,11 +23,25 @@ abstract class StreamTimer() : CountDownTimer(DURATION, INTERVAL_MS) {
     abstract fun updateNotification()
 
     fun getTimeElapsedString(): String {
-        return "%02d:%02d:%02d".format(
-            timeElapsed / HOUR,
-            timeElapsed / MINUTE % MINUTE,
-            timeElapsed % HOUR % MINUTE
-        )
+        return when {
+            timeElapsed > 0 -> {
+                "%02d:%02d:%02d".format(
+                    timeElapsed / HOUR,
+                    timeElapsed / MINUTE % MINUTE,
+                    timeElapsed % HOUR % MINUTE
+                )
+            }
+            timeElapsed >= 360000 -> {
+                "%03d:%02d:%02d".format(
+                    timeElapsed / HOUR,
+                    timeElapsed / MINUTE % MINUTE,
+                    timeElapsed % HOUR % MINUTE
+                )
+            }
+            else -> {
+                "00:00:00"
+            }
+        }
     }
 
     fun reset() {

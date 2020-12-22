@@ -366,7 +366,7 @@ class StreamService() : Service() {
                 videoEncoder.stop()
                 audioEncoder.stop()
             }
-            streamTimer?.cancel()
+            streamTimer?.reset()
         }
     }
 

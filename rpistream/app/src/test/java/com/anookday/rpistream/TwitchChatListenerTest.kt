@@ -8,13 +8,11 @@ import org.junit.Test
  * Unit test for [TwitchChatListener].
  */
 class TwitchChatListenerTest {
-    private val listener = object : TwitchChatListener("authToken", "user") {
-        override fun displayMessage(message: String) {}
-    }
+    private val listener = TwitchChatListener("authToken", "user") {}
 
     @Test
     fun testParseMessage() {
         val message = ":anotheruser!anotheruser@anotheruser.tmi.twitch.tv PRIVMSG #user :Kappa"
-        assertEquals("anotheruser: Kappa", listener.parseMessage(message))
+        assertEquals("anotheruser: Kappa", listener.parseMessage(message).toString())
     }
 }

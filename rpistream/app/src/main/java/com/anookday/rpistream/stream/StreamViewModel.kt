@@ -313,7 +313,7 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
                             for (j in 0 until intf.endpointCount) {
                                 val ep = intf.getEndpoint(j)
                                 if (ep.direction == UsbConstants.USB_DIR_OUT) {
-                                    val buffer = message.message.toByteArray()
+                                    val buffer = message.toString().toByteArray()
                                     usbManager.openDevice(device)?.apply {
                                         claimInterface(intf, true)
                                         bulkTransfer(ep, buffer, buffer.size, 0)

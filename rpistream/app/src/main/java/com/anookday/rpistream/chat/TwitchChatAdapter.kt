@@ -1,6 +1,7 @@
 package com.anookday.rpistream.chat
 
 import android.content.Context
+import android.graphics.Color
 import android.text.Layout
 import android.text.SpannableStringBuilder
 import android.view.LayoutInflater
@@ -8,6 +9,7 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.core.text.bold
+import androidx.core.text.color
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -39,8 +41,12 @@ class TwitchChatAdapter(private val context: Context?) : ListAdapter<TwitchChatI
     }
 
     private fun TextView.handleUserMessage(message: Message.UserMessage) {
-        val spannable = SpannableStringBuilder().bold { append("${message.name}: ") }
-        spannable.append(message.message)
+        val spannable = SpannableStringBuilder().bold {
+            color(Color.parseColor(message.color)) {
+                append(message.name)
+            }
+        }
+        spannable.append(": ${message.message}")
         text = spannable
     }
 }

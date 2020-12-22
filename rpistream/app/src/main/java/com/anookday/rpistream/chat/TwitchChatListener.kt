@@ -20,6 +20,7 @@ class TwitchChatListener(
         Timber.v("web socket opened")
         webSocket.send("PASS oauth:$authToken")
         webSocket.send("NICK $name")
+        webSocket.send("CAP REQ :twitch.tv/tags")
         webSocket.send("JOIN #$name")
     }
 
@@ -33,7 +34,8 @@ class TwitchChatListener(
                 // message indicating that the user has joined the chat channel
                 contains("366") -> displayMessage(Message.SystemMessage(SystemMessageType.CONNECTED))
                 // discard other messages
-                else -> {}
+                else -> {
+                }
             }
         }
     }
@@ -51,10 +53,11 @@ class TwitchChatListener(
     }
 
     fun parseMessage(text: String): Message.UserMessage {
-        val username = "(?<=:).*?(?=!)".toRegex().find(text)?.value
+        val username = "^.*?display-name=([^;]*)".toRegex().find(text)?.groupValues?.get(1)
+        val color = "^.*?color=([^;]*)".toRegex().find(text)?.groupValues?.get(1) ?: "#FFFFFF"
         val message = "(?<=#$name\\s:).*".toRegex().find(text)?.value
         if (username != null && message != null) {
-            return Message.UserMessage(UserMessageType.VALID, username, message)
+            return Message.UserMessage(UserMessageType.VALID, username, message, color = color)
         }
         return Message.UserMessage(UserMessageType.INVALID, "", "")
     }
