@@ -59,6 +59,6 @@ class TwitchChatListener(
         if (username != null && message != null) {
             return Message.UserMessage(UserMessageType.VALID, username, message, color = color)
         }
-        return Message.UserMessage(UserMessageType.INVALID, "", "")
+        return Message.UserMessage(UserMessageType.INVALID)
     }
 }

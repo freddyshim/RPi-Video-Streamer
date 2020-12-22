@@ -18,8 +18,8 @@ sealed class Message  {
 
     data class UserMessage(
         val state: UserMessageType,
-        val name: String,
-        val message: String,
+        val name: String = "",
+        val message: String = "",
         val color: String = "#000000",
         override val id: String = System.nanoTime().toString(),
         override val timestamp: Long = System.currentTimeMillis()

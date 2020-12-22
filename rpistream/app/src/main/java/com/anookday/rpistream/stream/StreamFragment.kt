@@ -126,10 +126,6 @@ class StreamFragment : Fragment() {
         }
     }
 
-    override fun onAttach(context: Context) {
-        super.onAttach(context)
-    }
-
     override fun onResume() {
         viewModel.setCurrentFragment(CurrentFragmentName.STREAM)
         (activity as StreamActivity).editNavigationDrawer(
@@ -313,10 +309,12 @@ class StreamFragment : Fragment() {
     }
 
     private fun onUserChange(user: User?) {
-        when (viewModel.chatStatus.value) {
-            ChatStatus.CONNECTED -> {
+        user?.let {
+            when (viewModel.chatStatus.value) {
+                ChatStatus.CONNECTED -> {
+                }
+                else -> viewModel.connectToChat()
             }
-            else -> viewModel.connectToChat()
         }
     }
 }
