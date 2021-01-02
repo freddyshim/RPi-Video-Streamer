@@ -1,6 +1,10 @@
 package com.anookday.rpistream.stream
 
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.media.AudioManager
 import android.os.Bundle
 import android.view.MenuItem
 import androidx.activity.viewModels
@@ -20,11 +24,25 @@ import com.anookday.rpistream.landing.LandingActivity
 import com.bumptech.glide.Glide
 import kotlinx.android.synthetic.main.nav_header.*
 import kotlinx.coroutines.launch
+import timber.log.Timber
 
 class StreamActivity : AppCompatActivity() {
     private lateinit var binding: ActivityStreamBinding
     private lateinit var navController: NavController
+    private lateinit var audioManager: AudioManager
     private val viewModel: StreamViewModel by viewModels()
+
+    private val bluetoothScoReceiver = object: BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val status = when (intent.getIntExtra(AudioManager.EXTRA_SCO_AUDIO_STATE, -1)) {
+                0 -> "disconnected"
+                1 -> "connected"
+                2 -> "connecting"
+                else -> "?"
+            }
+            Timber.v("Audio SCO state: $status")
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,6 +52,8 @@ class StreamActivity : AppCompatActivity() {
         val navHostFragment =
             supportFragmentManager.findFragmentById(R.id.navHostFragment) as NavHostFragment
         navController = navHostFragment.navController
+
+        audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
         setSupportActionBar(binding.appBar as Toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
@@ -81,6 +101,7 @@ class StreamActivity : AppCompatActivity() {
             })
         }
 
+        registerBluetooth()
     }
 
     override fun onDestroy() {
@@ -89,6 +110,7 @@ class StreamActivity : AppCompatActivity() {
         viewModel.disableCamera()
         viewModel.destroyUsbMonitor()
         viewModel.disconnectFromChat()
+        unregisterBluetooth()
         super.onDestroy()
     }
 
@@ -105,7 +127,6 @@ class StreamActivity : AppCompatActivity() {
     }
 
     override fun onBackPressed() {
-        val currentFragment = supportFragmentManager.findFragmentById(R.id.navHostFragment)
         when (viewModel.currentFragment.value) {
             CurrentFragmentName.STREAM -> {
                 val streamWarning =
@@ -124,6 +145,16 @@ class StreamActivity : AppCompatActivity() {
     private fun exitApp() {
         viewModel.prepareNavigation()
         finish()
+    }
+
+    private fun registerBluetooth() {
+        registerReceiver(bluetoothScoReceiver, IntentFilter(AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED))
+        audioManager.startBluetoothSco()
+    }
+
+    private fun unregisterBluetooth() {
+        unregisterReceiver(bluetoothScoReceiver)
+        audioManager.stopBluetoothSco()
     }
 
     fun editNavigationDrawer(barTitle: Int, button: Int?, enableDrawer: Boolean) {
