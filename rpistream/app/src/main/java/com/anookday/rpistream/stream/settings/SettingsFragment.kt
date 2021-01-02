@@ -13,8 +13,10 @@ import com.anookday.rpistream.repository.database.User
 import com.anookday.rpistream.stream.CurrentFragmentName
 import com.anookday.rpistream.stream.StreamActivity
 import com.anookday.rpistream.stream.StreamViewModel
-import timber.log.Timber
 
+/**
+ * Fragment that allows users to change app configurations (eg. stream settings, accessibility, etc.)
+ */
 class SettingsFragment : Fragment() {
     private lateinit var binding: FragmentSettingsBinding
     private val viewModel: StreamViewModel by activityViewModels()
@@ -69,9 +71,5 @@ class SettingsFragment : Fragment() {
                 }
             }
         }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
     }
 }

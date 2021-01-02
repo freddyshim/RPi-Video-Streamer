@@ -1,6 +1,5 @@
 package com.anookday.rpistream.repository.network
 
-import com.anookday.rpistream.repository.database.User
 import com.anookday.rpistream.util.Constants
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory

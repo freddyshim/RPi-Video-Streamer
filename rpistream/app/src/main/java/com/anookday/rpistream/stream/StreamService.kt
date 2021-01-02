@@ -225,6 +225,9 @@ class StreamService() : Service() {
             }
         }
 
+        /**
+         * Prepare encoders before streaming.
+         */
         private fun startEncoders() {
             if (videoEnabled) {
                 videoEncoder.start()
@@ -336,14 +339,9 @@ class StreamService() : Service() {
             }
         }
 
-        private fun resetVideoEncoder() {
-            glInterface?.let {
-                it.removeMediaCodecSurface()
-                videoEncoder.reset()
-                it.addMediaCodecSurface(videoEncoder.inputSurface)
-            }
-        }
-
+        /**
+         * Prepare GlInterface.
+         */
         private fun prepareGlView() {
             glInterface?.let {
                 if (videoEncoder.rotation == 90 || videoEncoder.rotation == 270) {
@@ -356,6 +354,9 @@ class StreamService() : Service() {
             }
         }
 
+        /**
+         * Stops the stream.
+         */
         fun stopStream() {
             if (isStreaming) {
                 isStreaming = false

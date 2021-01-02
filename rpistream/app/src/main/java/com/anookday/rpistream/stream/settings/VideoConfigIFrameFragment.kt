@@ -13,6 +13,9 @@ import com.anookday.rpistream.stream.CurrentFragmentName
 import com.anookday.rpistream.stream.StreamActivity
 import com.anookday.rpistream.stream.StreamViewModel
 
+/**
+ * Video keyframe (I-frame) configuration fragment.
+ */
 class VideoConfigIFrameFragment : Fragment() {
 
     private lateinit var binding: FragmentVideoConfigIframeBinding

@@ -7,12 +7,9 @@ import com.anookday.rpistream.repository.database.UserDatabase
 import com.anookday.rpistream.repository.network.*
 import kotlinx.coroutines.*
 import timber.log.Timber
-import java.util.*
 
 /**
- * Twitch OAuth manager class.
- *
- * @param context Activity instance
+ * Class to manage Twitch APIs.
  */
 class TwitchManager(private val context: Context, val database: UserDatabase) {
     /**

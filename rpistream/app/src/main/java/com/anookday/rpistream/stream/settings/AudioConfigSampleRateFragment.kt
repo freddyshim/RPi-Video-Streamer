@@ -13,6 +13,9 @@ import com.anookday.rpistream.stream.CurrentFragmentName
 import com.anookday.rpistream.stream.StreamActivity
 import com.anookday.rpistream.stream.StreamViewModel
 
+/**
+ * Audio sample rate configuration fragment.
+ */
 class AudioConfigSampleRateFragment : Fragment() {
     private lateinit var binding: FragmentAudioConfigSampleRateBinding
     private val viewModel: StreamViewModel by activityViewModels()

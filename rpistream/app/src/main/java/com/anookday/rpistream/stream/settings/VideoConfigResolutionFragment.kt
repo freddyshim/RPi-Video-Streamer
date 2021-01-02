@@ -13,6 +13,9 @@ import com.anookday.rpistream.stream.CurrentFragmentName
 import com.anookday.rpistream.stream.StreamActivity
 import com.anookday.rpistream.stream.StreamViewModel
 
+/**
+ * Video resolution configuration fragment.
+ */
 class VideoConfigResolutionFragment : Fragment() {
     private lateinit var binding: FragmentVideoConfigResolutionBinding
     private val viewModel: StreamViewModel by activityViewModels()

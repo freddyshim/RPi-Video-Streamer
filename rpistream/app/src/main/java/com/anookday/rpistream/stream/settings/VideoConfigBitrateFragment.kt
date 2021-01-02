@@ -14,6 +14,9 @@ import com.anookday.rpistream.stream.StreamActivity
 import com.anookday.rpistream.stream.StreamViewModel
 import com.anookday.rpistream.util.Constants
 
+/**
+ * Video bitrate configuration fragment.
+ */
 class VideoConfigBitrateFragment : Fragment() {
     private lateinit var binding: FragmentVideoConfigBitrateBinding
     private val viewModel: StreamViewModel by activityViewModels()

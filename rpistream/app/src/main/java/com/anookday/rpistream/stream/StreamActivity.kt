@@ -26,12 +26,15 @@ import kotlinx.android.synthetic.main.nav_header.*
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
+/**
+ * Activity that encompasses all stream related fragments and view models.
+ */
 class StreamActivity : AppCompatActivity() {
     private lateinit var binding: ActivityStreamBinding
     private lateinit var navController: NavController
     private lateinit var audioManager: AudioManager
     private val viewModel: StreamViewModel by viewModels()
-
+    // broadcast receiver for bluetooth audio connections
     private val bluetoothScoReceiver = object: BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             val status = when (intent.getIntExtra(AudioManager.EXTRA_SCO_AUDIO_STATE, -1)) {
@@ -142,21 +145,36 @@ class StreamActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Finish all running processes, free allocated memory and exit the app.
+     */
     private fun exitApp() {
         viewModel.prepareNavigation()
         finish()
     }
 
+    /**
+     * Register bluetooth audio.
+     */
     private fun registerBluetooth() {
         registerReceiver(bluetoothScoReceiver, IntentFilter(AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED))
         audioManager.startBluetoothSco()
     }
 
+    /**
+     * Unregister bluetooth audio.
+     */
     private fun unregisterBluetooth() {
         unregisterReceiver(bluetoothScoReceiver)
         audioManager.stopBluetoothSco()
     }
 
+    /**
+     * Edit action bar appearance and toggle navigation drawer lock.
+     * @param barTitle resource id of string to display as action bar title
+     * @param button resource id of icon to display as action bar home button
+     * @param enableDrawer if true then enable use of navigation drawer
+     */
     fun editNavigationDrawer(barTitle: Int, button: Int?, enableDrawer: Boolean) {
         supportActionBar?.apply {
             title = getString(barTitle)

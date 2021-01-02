@@ -14,6 +14,9 @@ import com.anookday.rpistream.stream.CurrentFragmentName
 import com.anookday.rpistream.stream.StreamActivity
 import com.anookday.rpistream.stream.StreamViewModel
 
+/**
+ * Audio base configuration fragment.
+ */
 class AudioConfigFragment : Fragment() {
     private lateinit var binding: FragmentAudioConfigBinding
     private val viewModel: StreamViewModel by activityViewModels()

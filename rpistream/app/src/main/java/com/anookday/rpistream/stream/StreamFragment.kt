@@ -2,7 +2,6 @@ package com.anookday.rpistream.stream
 
 import android.Manifest
 import android.animation.ObjectAnimator
-import android.content.Context
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.os.Bundle
@@ -18,9 +17,6 @@ import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.fragment.app.viewModels
-import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.anookday.rpistream.*
 import com.anookday.rpistream.chat.TwitchChatAdapter
@@ -33,6 +29,9 @@ import kotlinx.android.synthetic.main.fab_toggle_off.*
 import kotlinx.android.synthetic.main.fragment_stream.*
 import timber.log.Timber
 
+/**
+ * Main fragment for [StreamActivity].
+ */
 class StreamFragment : Fragment() {
     private lateinit var binding: FragmentStreamBinding
     private lateinit var chatAdapter: TwitchChatAdapter
@@ -115,14 +114,14 @@ class StreamFragment : Fragment() {
         chat_edit_message.setOnEditorActionListener(::onMessageActionDone)
 
         viewModel.apply {
-            usbStatus.observe(viewLifecycleOwner, ::onUsbStatusChange)
-            connectStatus.observe(viewLifecycleOwner, ::onConnectStatusChange)
-            authStatus.observe(viewLifecycleOwner, ::onAuthStatusChange)
-            videoStatus.observe(viewLifecycleOwner, ::onVideoStatusChange)
-            audioStatus.observe(viewLifecycleOwner, ::onAudioStatusChange)
-            chatMessages.observe(viewLifecycleOwner, ::onChatMessagesChange)
-            videoBitrate.observe(viewLifecycleOwner, ::onVideoBitrateChange)
-            user.observe(viewLifecycleOwner, ::onUserChange)
+            usbStatus.observe(viewLifecycleOwner, ::observeUsbStatus)
+            connectStatus.observe(viewLifecycleOwner, ::observeConnectStatus)
+            authStatus.observe(viewLifecycleOwner, ::observeAuthStatus)
+            videoStatus.observe(viewLifecycleOwner, ::observeVideoStatus)
+            audioStatus.observe(viewLifecycleOwner, ::observeAudioStatus)
+            chatMessages.observe(viewLifecycleOwner, ::observeChatMessages)
+            videoBitrate.observe(viewLifecycleOwner, ::observeVideoBitrate)
+            user.observe(viewLifecycleOwner, ::observeUser)
         }
     }
 
@@ -153,6 +152,9 @@ class StreamFragment : Fragment() {
         Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
     }
 
+    /**
+     * Click listener for menu fab.
+     */
     private fun onMenuFabClick(view: View) {
         isMenuPressed = !isMenuPressed
         var alpha = 0F
@@ -169,10 +171,16 @@ class StreamFragment : Fragment() {
         }
     }
 
+    /**
+     * Click listener for video fab.
+     */
     private fun onVideoFabClick(view: View) {
         viewModel.toggleVideo()
     }
 
+    /**
+     * Click listener for audio fab.
+     */
     private fun onAudioFabClick(view: View) {
         when (ContextCompat.checkSelfPermission(
             requireContext(),
@@ -187,10 +195,16 @@ class StreamFragment : Fragment() {
         }
     }
 
+    /**
+     * Click listener for stream fab.
+     */
     private fun onStreamFabClick(view: View) {
         viewModel.toggleStream()
     }
 
+    /**
+     * Listener for when user clicks "done" on keyboard while editing message text.
+     */
     private fun onMessageActionDone(view: TextView, id: Int, event: KeyEvent?): Boolean {
         if (id == EditorInfo.IME_ACTION_DONE) {
             onMessageSubmit(view)
@@ -198,6 +212,9 @@ class StreamFragment : Fragment() {
         return false
     }
 
+    /**
+     * Listener for submitting messages.
+     */
     private fun onMessageSubmit(view: View) {
         chat_edit_message.apply {
             if (text.isNotEmpty()) {
@@ -208,7 +225,10 @@ class StreamFragment : Fragment() {
         }
     }
 
-    private fun onUsbStatusChange(status: UsbConnectStatus?) {
+    /**
+     * Observer for USB status [LiveData].
+     */
+    private fun observeUsbStatus(status: UsbConnectStatus?) {
         status?.let {
             when (it) {
                 UsbConnectStatus.ATTACHED -> showMessage("USB device attached")
@@ -217,7 +237,10 @@ class StreamFragment : Fragment() {
         }
     }
 
-    private fun onConnectStatusChange(status: RtmpConnectStatus?) {
+    /**
+     * Observer for connection status [LiveData].
+     */
+    private fun observeConnectStatus(status: RtmpConnectStatus?) {
         status?.let {
             when (it) {
                 RtmpConnectStatus.SUCCESS -> {
@@ -249,7 +272,10 @@ class StreamFragment : Fragment() {
         }
     }
 
-    private fun onAuthStatusChange(status: RtmpAuthStatus?) {
+    /**
+     * Observer for authentication status [LiveData].
+     */
+    private fun observeAuthStatus(status: RtmpAuthStatus?) {
         status?.let {
             when (it) {
                 RtmpAuthStatus.SUCCESS -> showMessage("Auth success")
@@ -258,7 +284,10 @@ class StreamFragment : Fragment() {
         }
     }
 
-    private fun onVideoStatusChange(status: String?) {
+    /**
+     * Observer for video status [LiveData].
+     */
+    private fun observeVideoStatus(status: String?) {
         if (status != null) {
             video_fab.setImageResource(R.drawable.ic_baseline_videocam_24)
             video_fab.backgroundTintList = ColorStateList.valueOf(
@@ -274,7 +303,10 @@ class StreamFragment : Fragment() {
         }
     }
 
-    private fun onAudioStatusChange(status: String?) {
+    /**
+     * Observer for audio status [LiveData].
+     */
+    private fun observeAudioStatus(status: String?) {
         if (status != null) {
             audio_fab.setImageResource(R.drawable.ic_baseline_mic_24)
             audio_fab.backgroundTintList = ColorStateList.valueOf(
@@ -290,11 +322,17 @@ class StreamFragment : Fragment() {
         }
     }
 
-    private fun onChatMessagesChange(messages: MutableList<TwitchChatItem>) {
+    /**
+     * Observer for chat message list [LiveData].
+     */
+    private fun observeChatMessages(messages: MutableList<TwitchChatItem>) {
         chatAdapter.submitList(messages.toList())
     }
 
-    private fun onVideoBitrateChange(bitrate: Long?) {
+    /**
+     * Observer for video bitrate [LiveData].
+     */
+    private fun observeVideoBitrate(bitrate: Long?) {
         if (bitrate != null) {
             video_bitrate_display.apply {
                 text = getString(R.string.video_bitrate_display, bitrate / Constants.KILOBYTE_SIZE)
@@ -308,7 +346,10 @@ class StreamFragment : Fragment() {
         }
     }
 
-    private fun onUserChange(user: User?) {
+    /**
+     * Observer for user [LiveData].
+     */
+    private fun observeUser(user: User?) {
         user?.let {
             when (viewModel.chatStatus.value) {
                 ChatStatus.CONNECTED -> {

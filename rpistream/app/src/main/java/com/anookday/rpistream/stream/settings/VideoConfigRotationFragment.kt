@@ -13,6 +13,9 @@ import com.anookday.rpistream.stream.CurrentFragmentName
 import com.anookday.rpistream.stream.StreamActivity
 import com.anookday.rpistream.stream.StreamViewModel
 
+/**
+ * Video rotation configuration fragment.
+ */
 class VideoConfigRotationFragment : Fragment() {
 
     private lateinit var binding: FragmentVideoConfigRotationBinding

@@ -19,6 +19,9 @@ enum class DarkMode(val value: String) {
     SYSTEM("system")
 }
 
+/**
+ * Dark mode configuration fragment.
+ */
 class DarkModeFragment : Fragment() {
     private lateinit var binding: FragmentDarkModeBinding
     private val viewModel: StreamViewModel by activityViewModels()

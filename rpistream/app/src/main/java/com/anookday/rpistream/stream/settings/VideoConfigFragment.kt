@@ -14,6 +14,9 @@ import com.anookday.rpistream.stream.CurrentFragmentName
 import com.anookday.rpistream.stream.StreamActivity
 import com.anookday.rpistream.stream.StreamViewModel
 
+/**
+ * Video base configuration fragment.
+ */
 class VideoConfigFragment : Fragment() {
     private lateinit var binding: FragmentVideoConfigBinding
     private val viewModel: StreamViewModel by activityViewModels()

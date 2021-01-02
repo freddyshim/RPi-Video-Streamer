@@ -16,6 +16,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.*
 
+/**
+ * Activity that displays app's splash screen and navigates based on user authentication.
+ */
 class LandingActivity : AppCompatActivity() {
     private lateinit var binding: ActivityLandingBinding
     private val viewModel by viewModels<LandingViewModel>()

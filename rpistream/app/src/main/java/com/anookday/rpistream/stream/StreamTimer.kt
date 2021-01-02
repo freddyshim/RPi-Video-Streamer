@@ -8,6 +8,9 @@ private const val HOUR: Int = 60 * 60
 private const val MINUTE: Int = 60
 private const val SECOND: Int = 1
 
+/**
+ * Timer class that shows how long a user has been streaming.
+ */
 abstract class StreamTimer() : CountDownTimer(DURATION, INTERVAL_MS) {
     var timeElapsed: Int = 0
 

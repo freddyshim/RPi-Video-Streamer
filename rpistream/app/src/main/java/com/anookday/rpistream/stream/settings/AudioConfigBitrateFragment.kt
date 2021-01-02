@@ -8,13 +8,15 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import com.anookday.rpistream.R
 import com.anookday.rpistream.databinding.FragmentAudioConfigBitrateBinding
-import com.anookday.rpistream.databinding.FragmentVideoConfigBitrateBinding
 import com.anookday.rpistream.repository.database.User
 import com.anookday.rpistream.stream.CurrentFragmentName
 import com.anookday.rpistream.stream.StreamActivity
 import com.anookday.rpistream.stream.StreamViewModel
 import com.anookday.rpistream.util.Constants
 
+/**
+ * Audio bitrate configuration fragment.
+ */
 class AudioConfigBitrateFragment : Fragment() {
     private lateinit var binding: FragmentAudioConfigBitrateBinding
     private val viewModel: StreamViewModel by activityViewModels()

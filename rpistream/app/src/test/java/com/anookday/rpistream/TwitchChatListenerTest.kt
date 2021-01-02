@@ -1,7 +1,7 @@
 package com.anookday.rpistream
 
-import com.anookday.rpistream.chat.Message
 import com.anookday.rpistream.chat.TwitchChatListener
+import com.anookday.rpistream.chat.UserMessage
 import com.anookday.rpistream.chat.UserMessageType
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -14,7 +14,7 @@ class TwitchChatListenerTest {
 
     @Test
     fun testParseMessage() {
-        val expected = Message.UserMessage(
+        val expected = UserMessage(
             UserMessageType.VALID,
             "foshimmy",
             "hello",

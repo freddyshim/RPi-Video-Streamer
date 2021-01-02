@@ -5,11 +5,13 @@ import android.os.Bundle
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.databinding.DataBindingUtil
-import androidx.lifecycle.lifecycleScope
 import com.anookday.rpistream.R
 import com.anookday.rpistream.databinding.ActivityLoginBinding
 import com.anookday.rpistream.stream.StreamActivity
 
+/**
+ * Activity that handles user login.
+ */
 class LoginActivity: AppCompatActivity() {
     private lateinit var binding: ActivityLoginBinding
     private val viewModel by viewModels<LoginViewModel>()

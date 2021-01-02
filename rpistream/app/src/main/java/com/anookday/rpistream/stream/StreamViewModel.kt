@@ -7,21 +7,15 @@ import android.hardware.usb.UsbConstants
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbInterface
 import android.hardware.usb.UsbManager
-import android.view.View
-import android.widget.Toast
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.anookday.rpistream.R
 import com.anookday.rpistream.UserViewModel
 import com.anookday.rpistream.chat.*
-import com.anookday.rpistream.repository.database.AudioConfig
-import com.anookday.rpistream.repository.database.VideoConfig
 import com.anookday.rpistream.extensions.addNewItem
 import com.anookday.rpistream.oauth.TwitchManager
-import com.google.android.material.switchmaterial.SwitchMaterial
 import com.pedro.rtplibrary.util.BitrateAdapter
-import com.pedro.rtplibrary.view.GlInterface
 import com.pedro.rtplibrary.view.OpenGlView
 import com.serenegiant.usb.USBMonitor
 import kotlinx.coroutines.Dispatchers
@@ -36,7 +30,7 @@ import timber.log.Timber
 enum class UsbConnectStatus { ATTACHED, DETACHED }
 enum class RtmpConnectStatus { SUCCESS, FAIL, DISCONNECT }
 enum class RtmpAuthStatus { SUCCESS, FAIL }
-enum class ChatStatus { CONNECTED, DISCONNECTED, ERROR }
+enum class ChatStatus { CONNECTED, DISCONNECTED }
 enum class CurrentFragmentName {
     STREAM,
     ACCOUNT,
@@ -124,24 +118,29 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
         registerUsbMonitor()
     }
 
+    /**
+     * Update live data with current fragment's name.
+     */
     fun setCurrentFragment(fragmentName: CurrentFragmentName) {
         _currentFragment.value = fragmentName
     }
 
+    /**
+     * Register USB monitor.
+     */
     fun registerUsbMonitor() {
         viewModelScope.launch {
             usbMonitor?.register()
         }
     }
 
+    /**
+     * Unregister USB monitor.
+     */
     fun unregisterUsbMonitor() {
         viewModelScope.launch {
             usbMonitor?.unregister()
         }
-    }
-
-    fun setGlInterface(glInterface: GlInterface) {
-        StreamService.setGlInterface(glInterface)
     }
 
     /**
@@ -281,7 +280,7 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
             chatWebSocket?.apply {
                 send("PRIVMSG #${it.profile.displayName} :$text")
                 val message =
-                    Message.UserMessage(UserMessageType.VALID, it.profile.displayName, text)
+                    UserMessage(UserMessageType.VALID, it.profile.displayName, text)
                 _chatMessages.addNewItem(TwitchChatItem(message))
             }
         }
@@ -303,7 +302,7 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
      */
     private suspend fun routeMessageToPi(message: Message) {
         withContext(Dispatchers.IO) {
-            if (message is Message.UserMessage) {
+            if (message is UserMessage) {
                 val deviceList = usbManager.deviceList
                 if (deviceList.isNotEmpty()) {
                     val device: UsbDevice = deviceList.values.elementAt(0)
@@ -327,10 +326,11 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
         }
     }
 
-    /*
-     * SETTINGS METHODS
+    /**
+     * Update video resolution in user settings.
+     * @param width resolution width in pixels
+     * @param height resolution height in pixels
      */
-
     fun updateVideoResolution(width: Int, height: Int) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
@@ -341,6 +341,10 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
         }
     }
 
+    /**
+     * Update max frames-per-second in user settings.
+     * @param fps frames-per-second threshold
+     */
     fun updateVideoFps(fps: Int) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
@@ -351,6 +355,10 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
         }
     }
 
+    /**
+     * Update maximum video bitrate in user settings.
+     * @param bitrate maximum bitrate in bytes
+     */
     fun updateVideoBitrate(bitrate: Int) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
@@ -361,6 +369,10 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
         }
     }
 
+    /**
+     * Update i-frame limit in user settings.
+     * @param iframe keyframe (i-frame) count
+     */
     fun updateVideoIFrame(iframe: Int) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
@@ -371,6 +383,10 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
         }
     }
 
+    /**
+     * Update video rotation angle in user settings.
+     * @param rotation rotation angle in degrees
+     */
     fun updateVideoRotation(rotation: Int) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
@@ -381,6 +397,10 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
         }
     }
 
+    /**
+     * Update maximum audio bitrate in user settings.
+     * @param bitrate audio bitrate in bytes
+     */
     fun updateAudioBitrate(bitrate: Int) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
@@ -391,6 +411,10 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
         }
     }
 
+    /**
+     * Update audio sample rate in user settings.
+     * @param sampleRate sample rate in hertz
+     */
     fun updateAudioSampleRate(sampleRate: Int) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
@@ -401,6 +425,10 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
         }
     }
 
+    /**
+     * Update stereo toggle in user settings.
+     * @param stereo if true then enable stereo
+     */
     fun updateAudioStereo(stereo: Boolean) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
@@ -411,6 +439,10 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
         }
     }
 
+    /**
+     * Update echo canceler toggle in user settings.
+     * @param echoCanceler if true then enable echo canceler
+     */
     fun updateAudioEchoCanceler(echoCanceler: Boolean) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
@@ -421,6 +453,10 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
         }
     }
 
+    /**
+     * Update noise suppressor toggle in user settings.
+     * @param noiseSuppressor if true then enable noise suppressor
+     */
     fun updateAudioNoiseSuppressor(noiseSuppressor: Boolean) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
@@ -431,6 +467,10 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
         }
     }
 
+    /**
+     * Update dark mode toggle in user settings.
+     * @param darkMode if true then enable dark mode
+     */
     fun updateDarkMode(darkMode: String) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
@@ -441,6 +481,10 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
         }
     }
 
+    /**
+     * Update developer mode toggle in user settings.
+     * @param developerMode if true then enable developer mode
+     */
     fun updateDeveloperMode(developerMode: Boolean) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
@@ -481,7 +525,7 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
             ctrlBlock: USBMonitor.UsbControlBlock?,
             createNew: Boolean
         ) {
-            Timber.v("RPISTREAM onDeviceConnectListener: Device connected")
+            Timber.v("onDeviceConnectListener: Device connected")
             user.value?.let {
                 viewModelScope.launch {
                     try {
@@ -503,7 +547,7 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
         }
 
         override fun onAttach(device: UsbDevice?) {
-            Timber.v("RPISTREAM onDeviceConnectListener: Device attached")
+            Timber.v("onDeviceConnectListener: Device attached")
             _usbStatus.postValue(UsbConnectStatus.ATTACHED)
             val permissionIntent = PendingIntent.getBroadcast(
                 app.applicationContext, 0, Intent(
@@ -516,7 +560,7 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
         }
 
         override fun onDisconnect(device: UsbDevice?, ctrlBlock: USBMonitor.UsbControlBlock?) {
-            Timber.v("RPISTREAM onDeviceConnectListener: Device disconnected")
+            Timber.v("onDeviceConnectListener: Device disconnected")
             viewModelScope.launch {
                 StreamService.disableCamera()
                 _videoStatus.postValue(null)
@@ -524,7 +568,7 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
         }
 
         override fun onDettach(device: UsbDevice?) {
-            Timber.v("RPISTREAM onDeviceConnectListener: Device detached")
+            Timber.v("onDeviceConnectListener: Device detached")
             _usbStatus.postValue(UsbConnectStatus.DETACHED)
         }
 

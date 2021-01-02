@@ -4,10 +4,11 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.Observer
 import com.anookday.rpistream.R
-import com.anookday.rpistream.stream.StreamActivity
 
+/**
+ * Activity that handles redirects from oauth2 callbacks.
+ */
 class LoginAuthenticationActivity : AppCompatActivity() {
     private val viewModel by viewModels<LoginViewModel>()
 

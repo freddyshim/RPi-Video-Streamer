@@ -13,6 +13,9 @@ import com.anookday.rpistream.stream.CurrentFragmentName
 import com.anookday.rpistream.stream.StreamActivity
 import com.anookday.rpistream.stream.StreamViewModel
 
+/**
+ * Video frames-per-second configuration fragment.
+ */
 class VideoConfigFpsFragment : Fragment() {
     private lateinit var binding: FragmentVideoConfigFpsBinding
     private val viewModel: StreamViewModel by activityViewModels()
