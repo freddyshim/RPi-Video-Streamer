@@ -8,5 +8,6 @@
     android:background="@color/colorPrimary"
     android:elevation="4dp"
     android:theme="@style/ThemeOverlay.AppCompat.ActionBar"
+    app:titleTextColor="@color/colorIconText"
     app:popupTheme="@style/ThemeOverlay.AppCompat.Light">
 </com.google.android.material.appbar.MaterialToolbar>

@@ -22,6 +22,7 @@ import com.anookday.rpistream.R
 import com.anookday.rpistream.databinding.ActivityStreamBinding
 import com.anookday.rpistream.landing.LandingActivity
 import com.bumptech.glide.Glide
+import com.google.android.gms.oss.licenses.OssLicensesMenuActivity
 import kotlinx.android.synthetic.main.nav_header.*
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -75,6 +76,13 @@ class StreamActivity : AppCompatActivity() {
                         appContainer.closeDrawers()
                         viewModel.prepareNavigation()
                         navController.navigate(R.id.action_streamFragment_to_settingsFragment)
+                        true
+                    }
+                    R.id.nav_licenses -> {
+                        appContainer.closeDrawers()
+                        viewModel.prepareNavigation()
+                        OssLicensesMenuActivity.setActivityTitle(getString(R.string.licenses))
+                        startActivity(Intent(this@StreamActivity, OssLicensesMenuActivity::class.java))
                         true
                     }
                     R.id.nav_logout -> {
