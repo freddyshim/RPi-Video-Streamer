@@ -47,13 +47,20 @@ network={
 }
 ```
 
-### 2. Enable Camera
+### 2. SSH into Raspberry Pi
+Connect your Raspberry Pi Zero to your phone via the <b>USB</b> (NOT PWR) port on the Pi. The first boot may take a few minutes. Once your Pi is fully booted, you can SSH into your Pi over wifi. Find your Pi's ip address and execute the following, replacing `IP_ADDRESS` with that of the Pi:
+```
+ssh-keygen -R IP_ADDRESS
+ssh pi@IP_ADDRESS
+```
+
+### 3. Enable Camera
 Connect your camera module to the Raspberry Pi if you already haven't done so. Then, you can find the menu to enable the camera by running the command:
 ```
 sudo raspi-config
 ```
 
-### 3. Configure Pi as a UVC Gadget
+### 4. Configure Pi as a UVC Gadget
 Check out a forked version of uvc-gadget:
 ```
 cd /home/pi
