@@ -34,6 +34,18 @@ If you own a Raspberry Pi Zero W and would like to debug over a WiFi connection,
 ```
 touch ssh
 ```
+Create a file called `wpa_supplicant.conf` with the following contents, replacing `COUNTRY_CODE`, `WIFI_NAME` and `WIFI_PASSWORD` with their respective contents:
+```
+ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+update_config=1
+country=COUNTRY_CODE
+
+network={
+     ssid="WIFI_NAME"
+     psk="WIFI_PASSWORD"
+     key_mgmt=WPA-PSK
+}
+```
 
 ### 2. Enable Camera
 Connect your camera module to the Raspberry Pi if you already haven't done so. Then, you can find the menu to enable the camera by running the command:
