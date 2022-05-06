@@ -93,6 +93,8 @@ http://www.davidhunt.ie/raspberry-pi-zero-with-pi-camera-as-usb-webcam/
 This app has been tested with NDK version 14 which you cannot donwload directly from Android Studio. Google provides download mirrors for older versions of NDK (<16) in the following link: 
 https://developer.android.com/ndk/downloads/older_releases
 
+Some modifications need to be made in the downloaded ndk. From the root directory of the NDK, change the file name of `prebuilt/YOUR_CHIP_ARCHITECTURE/bin/awk.exe` to `awk_.exe`, replacing `YOUR_CHIP_ARCHITECTURE` with your local machine's CPU architecture (eg. darwin_x86, armv6, etc.).
+
 ### 2. Compile in Android Studio
 Clone this repository to your desired location and open the "rpistream" directory in Android Studio. Then, add the following line at the botoom of file "local.properties":
 ```
