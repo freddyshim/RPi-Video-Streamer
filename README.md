@@ -22,15 +22,15 @@ Stream footage from Twitch exported to YouTube:
 ## Raspberry Pi Setup
 
 ### 1. Enabling OTG
-We need to edit some files on Raspberry Pi's boot disk. Add the following line at the bottom of /boot/config.txt:
+We need to edit some files on Raspberry Pi's boot disk. Navigate to your Raspberry Pi image (eg. `/Volumes/boot` on Mac). Add the following line at the bottom of `config.txt`:
 ```
 dtoverlay=dwc2
 ```
-Add the following at the end of the line of /boot/cmdline.txt:
+In `cmdline.txt`, add the following after the word `rootwait`:
 ```
 modules-load=dwc2,libcomposite
 ```
-If you own a Raspberry Pi Zero W and would like to debug over a WiFi connection, run the following command in the /boot directory:
+To enable ssh over wifi, create a file called `ssh` in the `boot` image by running the command:
 ```
 touch ssh
 ```
