@@ -78,6 +78,8 @@ make
 ```
 Enable serial connection (for app-to-pi communication):
 ```
+sudo systemctl stop getty@ttyGS0.service
+sudo systemctl disable getty@ttyGS0.service
 sudo ln -s /lib/systemd/system/getty@.service /etc/systemd/system/getty.target.wants/getty@ttyGS0.service
 sudo systemctl enable getty@ttyGS0.service
 ```
