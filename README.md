@@ -64,7 +64,7 @@ sudo raspi-config
 Check out a forked version of uvc-gadget:
 ```
 cd /home/pi
-git clone https://github.com/climberhunt/uvc-gadget.git
+git clone https://github.com/peterbay/uvc-gadget
 ```
 This repository provides a script that creates a systemd service. To install this, copy the file to the specified location and enable it.
 ```
