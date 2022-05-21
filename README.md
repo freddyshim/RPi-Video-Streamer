@@ -63,7 +63,6 @@ sudo raspi-config
 ### 4. Configure Pi as a UVC Gadget
 Check out a forked version of uvc-gadget:
 ```
-cd /home/pi
 git clone https://github.com/peterbay/uvc-gadget
 ```
 This repository provides a script that creates a systemd service. To install this, copy the file to the specified location and enable it.
