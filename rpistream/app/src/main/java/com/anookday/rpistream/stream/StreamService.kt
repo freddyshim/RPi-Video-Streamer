@@ -31,7 +31,7 @@ import timber.log.Timber
 import java.nio.ByteBuffer
 
 const val STREAM_SERVICE_NOTIFICATION_ID = 123456
-const val STREAM_SERVICE_NAME = "RPi Streamer"
+const val STREAM_SERVICE_NAME = "RPi Streamer | Stream Service"
 
 /**
  * Service that handles streaming video output from UVCCamera and audio output from an audio input

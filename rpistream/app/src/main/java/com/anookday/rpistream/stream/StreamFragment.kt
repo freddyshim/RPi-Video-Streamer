@@ -123,7 +123,6 @@ class StreamFragment : Fragment() {
             audioStatus.observe(viewLifecycleOwner, ::observeAudioStatus)
             chatMessages.observe(viewLifecycleOwner, ::observeChatMessages)
             videoBitrate.observe(viewLifecycleOwner, ::observeVideoBitrate)
-            user.observe(viewLifecycleOwner, ::observeUser)
         }
     }
 
@@ -329,6 +328,7 @@ class StreamFragment : Fragment() {
      */
     private fun observeChatMessages(messages: List<Message>) {
         chatAdapter.submitList(messages)
+        chat_messages?.scrollToPosition(chatAdapter.itemCount - 1)
     }
 
     /**
@@ -344,17 +344,6 @@ class StreamFragment : Fragment() {
             video_bitrate_display.apply {
                 text = null
                 visibility = View.INVISIBLE
-            }
-        }
-    }
-
-    /**
-     * Observer for user [LiveData].
-     */
-    private fun observeUser(user: User?) {
-        user?.let {
-            if (ChatService.status == ChatStatus.DISCONNECTED) {
-                viewModel.connectToChat()
             }
         }
     }

@@ -58,6 +58,7 @@ class TwitchChatListener(
 
     override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
         Timber.e("web socket failed: ${t.message}")
+        Timber.e(t)
         super.onFailure(webSocket, t, response)
         // alert user that they are disconnected from chat
         displayMessage(Message(MessageType.SYSTEM, context.getString(R.string.chat_disconnected_msg)))

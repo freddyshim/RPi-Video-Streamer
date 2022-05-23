@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.media.AudioManager
 import android.os.Bundle
+import android.provider.Settings
 import android.view.MenuItem
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
@@ -19,6 +20,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import com.anookday.rpistream.R
+import com.anookday.rpistream.chat.ChatService
+import com.anookday.rpistream.chat.ChatStatus
 import com.anookday.rpistream.databinding.ActivityStreamBinding
 import com.anookday.rpistream.landing.LandingActivity
 import com.bumptech.glide.Glide
@@ -50,6 +53,10 @@ class StreamActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        //val myIntent = Intent()
+        //myIntent.action = Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS
+        //startActivity(myIntent)
 
         binding = DataBindingUtil.setContentView(this, R.layout.activity_stream)
 
@@ -103,6 +110,9 @@ class StreamActivity : AppCompatActivity() {
                     user_id.text = user.profile.displayName
                     user_description.text = user.profile.description
                     Glide.with(this@StreamActivity).load(user.profile.profileImage).into(user_icon)
+                    if (ChatService.status == ChatStatus.DISCONNECTED) {
+                        connectToChat()
+                    }
                 } else {
                     val loginIntent = Intent(this@StreamActivity, LandingActivity::class.java)
                     loginIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)

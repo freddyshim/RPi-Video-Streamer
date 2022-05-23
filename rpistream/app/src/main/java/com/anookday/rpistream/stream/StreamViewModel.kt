@@ -275,6 +275,7 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
      * Safely disconnect from user's chat web socket.
      */
     fun disconnectFromChat() {
+        Timber.d("Disconnecting from chat")
         val intent = Intent(app.applicationContext, ChatService::class.java)
         app.stopService(intent)
     }
