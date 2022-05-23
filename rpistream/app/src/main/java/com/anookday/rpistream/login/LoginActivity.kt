@@ -25,12 +25,12 @@ class LoginActivity: AppCompatActivity() {
             viewModel.login(this)
         }
 
-        viewModel.user.observe(this, { user ->
+        viewModel.user.observe(this) { user ->
             if (user != null) {
                 val loginConfirmIntent = Intent(this, StreamActivity::class.java)
                 startActivity(loginConfirmIntent)
                 finish()
             }
-        })
+        }
     }
 }

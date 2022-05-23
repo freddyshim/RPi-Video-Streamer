@@ -16,11 +16,11 @@ class LoginAuthenticationActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_login_authentication)
 
-        viewModel.user.observe(this, { user ->
+        viewModel.user.observe(this) { user ->
             if (user != null) {
                 finish()
             }
-        })
+        }
 
         intent.data?.let { uri ->
             val id: String? = uri.getQueryParameter("id")

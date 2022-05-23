@@ -14,11 +14,12 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.anookday.rpistream.R
 import com.anookday.rpistream.databinding.ChatItemBinding
+import com.anookday.rpistream.repository.database.Message
 
 /**
  * Adapter for a Twitch Chat [RecyclerView].
  */
-class TwitchChatAdapter(private val context: Context?) : ListAdapter<TwitchChatItem, TwitchChatAdapter.ViewHolder>(ItemDiff()) {
+class TwitchChatAdapter(private val context: Context?) : ListAdapter<Message, TwitchChatAdapter.ViewHolder>(ItemDiff()) {
     class ViewHolder(val binding: ChatItemBinding) : RecyclerView.ViewHolder(binding.root)
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -27,20 +28,17 @@ class TwitchChatAdapter(private val context: Context?) : ListAdapter<TwitchChatI
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = getItem(position)
-        when (val message = item.message) {
-            is SystemMessage -> holder.binding.chatItem.handleSystemMessage(message)
-            is UserMessage -> holder.binding.chatItem.handleUserMessage(message)
+        when (item.type) {
+            MessageType.SYSTEM -> holder.binding.chatItem.handleSystemMessage(item)
+            MessageType.USER -> holder.binding.chatItem.handleUserMessage(item)
         }
     }
 
     /**
      * Display system messages as faded grey text.
      */
-    private fun TextView.handleSystemMessage(message: SystemMessage) {
-        text = when (message.state) {
-            SystemMessageType.CONNECTED -> resources.getString(R.string.chat_connected_msg)
-            SystemMessageType.DISCONNECTED -> resources.getString(R.string.chat_disconnected_msg)
-        }
+    private fun TextView.handleSystemMessage(message: Message) {
+        text = message.bodyText
         setTextColor(ContextCompat.getColor(context, R.color.colorTextSecondary))
 
     }
@@ -48,23 +46,23 @@ class TwitchChatAdapter(private val context: Context?) : ListAdapter<TwitchChatI
     /**
      * Display user messages with appropriate styling.
      */
-    private fun TextView.handleUserMessage(message: UserMessage) {
+    private fun TextView.handleUserMessage(message: Message) {
         val spannable = SpannableStringBuilder().bold {
-            color(Color.parseColor(message.color)) {
-                append(message.name)
+            color(Color.parseColor(message.headerColor)) {
+                append(message.headerText)
             }
         }
-        spannable.append(": ${message.message}")
+        spannable.append(": ${message.bodyText}")
         text = spannable
     }
 }
 
-private class ItemDiff : DiffUtil.ItemCallback<TwitchChatItem>() {
-    override fun areItemsTheSame(oldItem: TwitchChatItem, newItem: TwitchChatItem): Boolean {
-        return oldItem.message == newItem.message
+private class ItemDiff : DiffUtil.ItemCallback<Message>() {
+    override fun areItemsTheSame(oldItem: Message, newItem: Message): Boolean {
+        return oldItem.id == newItem.id
     }
 
-    override fun areContentsTheSame(oldItem: TwitchChatItem, newItem: TwitchChatItem): Boolean {
+    override fun areContentsTheSame(oldItem: Message, newItem: Message): Boolean {
         return oldItem == newItem
     }
 }

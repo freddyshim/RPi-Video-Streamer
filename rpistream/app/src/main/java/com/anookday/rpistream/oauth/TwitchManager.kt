@@ -3,7 +3,7 @@ package com.anookday.rpistream.oauth
 import android.content.Context
 import com.anookday.rpistream.R
 import com.anookday.rpistream.repository.database.User
-import com.anookday.rpistream.repository.database.UserDatabase
+import com.anookday.rpistream.repository.database.AppDatabase
 import com.anookday.rpistream.repository.network.*
 import kotlinx.coroutines.*
 import timber.log.Timber
@@ -11,7 +11,7 @@ import timber.log.Timber
 /**
  * Class to manage Twitch APIs.
  */
-class TwitchManager(private val context: Context, val database: UserDatabase) {
+class TwitchManager(private val context: Context, val database: AppDatabase) {
     /**
      * Get user from PP backend server and save it to local database.
      *

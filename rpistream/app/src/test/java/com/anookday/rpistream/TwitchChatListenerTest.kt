@@ -42,8 +42,8 @@ class TwitchChatListenerTest {
         val actual = listener.parseMessage(message)
 
         assertEquals(expected.state, actual.state)
-        assertEquals(expected.name, actual.name)
-        assertEquals(expected.message, actual.message)
-        assertEquals(expected.color, actual.color)
+        assertEquals(expected.name, actual.headerText)
+        assertEquals(expected.message, actual.bodyText)
+        assertEquals(expected.color, actual.headerColor)
     }
 }

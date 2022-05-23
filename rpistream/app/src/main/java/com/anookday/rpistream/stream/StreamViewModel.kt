@@ -15,6 +15,7 @@ import com.anookday.rpistream.UserViewModel
 import com.anookday.rpistream.chat.*
 import com.anookday.rpistream.extensions.addNewItem
 import com.anookday.rpistream.oauth.TwitchManager
+import com.anookday.rpistream.repository.database.Message
 import com.pedro.rtplibrary.util.BitrateAdapter
 import com.pedro.rtplibrary.view.OpenGlView
 import com.serenegiant.usb.USBMonitor
@@ -98,9 +99,7 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
         get() = _chatStatus
 
     // chat messages
-    private val _chatMessages = MutableLiveData<MutableList<TwitchChatItem>>()
-    val chatMessages: LiveData<MutableList<TwitchChatItem>>
-        get() = _chatMessages
+    val chatMessages: LiveData<List<Message>> = database.messageDao.getChat()
 
     private val _videoBitrate = MutableLiveData<Long?>()
     val videoBitrate: LiveData<Long?>
@@ -258,11 +257,11 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
             val request = Request.Builder().url("wss://irc-ws.chat.twitch.tv:443").build()
             val twitchChatListener =
                 TwitchChatListener(
+                    app.applicationContext,
                     it.auth.accessToken,
                     it.profile.displayName
                 ) { message: Message ->
-                    _chatMessages.addNewItem(TwitchChatItem(message))
-
+                    database.messageDao.addMessageToChat(message)
                     viewModelScope.launch {
                         routeMessageToPi(message)
                     }
@@ -278,10 +277,12 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
     fun sendMessage(text: String) {
         user.value?.let {
             chatWebSocket?.apply {
-                send("PRIVMSG #${it.profile.displayName} :$text")
-                val message =
-                    UserMessage(UserMessageType.VALID, it.profile.displayName, text)
-                _chatMessages.addNewItem(TwitchChatItem(message))
+                viewModelScope.launch {
+                    withContext(Dispatchers.IO) {
+                        send("PRIVMSG #${it.profile.displayName} :$text")
+                        database.messageDao.addMessageToChat(Message(MessageType.USER, text, it.profile.displayName))
+                    }
+                }
             }
         }
     }
@@ -302,7 +303,7 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
      */
     private suspend fun routeMessageToPi(message: Message) {
         withContext(Dispatchers.IO) {
-            if (message is UserMessage) {
+            if (message.type == MessageType.USER) {
                 val deviceList = usbManager.deviceList
                 if (deviceList.isNotEmpty()) {
                     val device: UsbDevice = deviceList.values.elementAt(0)

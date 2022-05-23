@@ -3,9 +3,17 @@ package com.anookday.rpistream.repository.database
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import androidx.room.TypeConverters
+import com.anookday.rpistream.chat.MessageType
+import com.anookday.rpistream.chat.MessageTypeConverters
 import com.anookday.rpistream.repository.network.*
+import com.squareup.moshi.JsonAdapter
+import com.squareup.moshi.Moshi
 
-@Entity
+private val moshi: Moshi = Moshi.Builder().build()
+private val messageAdapter: JsonAdapter<Message> = moshi.adapter(Message::class.java)
+
+@Entity(tableName = "user")
 data class User(
     @PrimaryKey val id: String,
     @Embedded val profile: UserProfile,
@@ -17,7 +25,7 @@ data class User(
     }
 }
 
-@Entity
+@Entity(tableName = "user")
 data class UserProfile(
     val login: String,
     val displayName: String,
@@ -30,7 +38,7 @@ data class UserProfile(
     }
 }
 
-@Entity
+@Entity(tableName = "user")
 data class UserAuth(
     val accessToken: String,
     val refreshToken: String,
@@ -41,7 +49,7 @@ data class UserAuth(
     }
 }
 
-@Entity
+@Entity(tableName = "user")
 data class UserSettings(
     @Embedded(prefix = "video_") val videoConfig: VideoConfig,
     @Embedded(prefix = "audio_") val audioConfig: AudioConfig,
@@ -69,7 +77,7 @@ data class UserSettings(
  * @property iFrameInterval     Key frame (i-frame) interval.
  * @property rotation           Degree of rotation (eg. 0, 90, 180, or 270).
  */
-@Entity
+@Entity(tableName = "user")
 data class VideoConfig(
     val width: Int = 1920,
     val height: Int = 1080,
@@ -93,7 +101,7 @@ data class VideoConfig(
  * @property echoCanceler       If true then enable echo canceler.
  * @property noiseSuppressor    If true then enable noise suppressor.
  */
-@Entity
+@Entity(tableName = "user")
 data class AudioConfig(
     val bitrate: Int = 64 * 1024,
     val sampleRate: Int = 44100,
@@ -103,5 +111,23 @@ data class AudioConfig(
 ) {
     fun toNetwork(): NetworkAudioConfig {
         return NetworkAudioConfig(bitrate, sampleRate, stereo, echoCanceler, noiseSuppressor)
+    }
+}
+
+/**
+ * Abstract class that represents a message from a connected web socket.
+ */
+@Entity(tableName = "message")
+@TypeConverters(MessageTypeConverters::class)
+data class Message (
+    val type: MessageType,
+    val bodyText: String = "",
+    val headerText: String = "",
+    val headerColor: String = "#000000",
+    @PrimaryKey val id: String = System.nanoTime().toString(),
+    val timestamp: Long = System.currentTimeMillis(),
+) {
+    override fun toString(): String {
+        return if (type == MessageType.USER) "${headerText}: $bodyText" else bodyText
     }
 }

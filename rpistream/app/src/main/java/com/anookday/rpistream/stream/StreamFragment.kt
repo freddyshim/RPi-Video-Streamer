@@ -22,6 +22,7 @@ import com.anookday.rpistream.*
 import com.anookday.rpistream.chat.TwitchChatAdapter
 import com.anookday.rpistream.chat.TwitchChatItem
 import com.anookday.rpistream.databinding.FragmentStreamBinding
+import com.anookday.rpistream.repository.database.Message
 import com.anookday.rpistream.repository.database.User
 import com.anookday.rpistream.util.Constants
 import kotlinx.android.synthetic.main.activity_stream.*
@@ -325,8 +326,8 @@ class StreamFragment : Fragment() {
     /**
      * Observer for chat message list [LiveData].
      */
-    private fun observeChatMessages(messages: MutableList<TwitchChatItem>) {
-        chatAdapter.submitList(messages.toList())
+    private fun observeChatMessages(messages: List<Message>) {
+        chatAdapter.submitList(messages)
     }
 
     /**
