@@ -94,10 +94,6 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
     val audioStatus: LiveData<String?>
         get() = _audioStatus
 
-    private val _chatStatus = MutableLiveData<ChatStatus>()
-    val chatStatus: LiveData<ChatStatus>
-        get() = _chatStatus
-
     // chat messages
     val chatMessages: LiveData<List<Message>> = database.messageDao.getChat()
 
@@ -115,6 +111,7 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
         usbMonitor = USBMonitor(context, onDeviceConnectListener)
         StreamService.init(cameraView, connectCheckerRtmp)
         registerUsbMonitor()
+        connectToChat()
     }
 
     /**
@@ -252,22 +249,12 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
      * Connect to user's chat web socket.
      */
     fun connectToChat() {
+        Timber.d("User ${user.value}")
         user.value?.let {
-            val client = OkHttpClient()
-            val request = Request.Builder().url("wss://irc-ws.chat.twitch.tv:443").build()
-            val twitchChatListener =
-                TwitchChatListener(
-                    app.applicationContext,
-                    it.auth.accessToken,
-                    it.profile.displayName
-                ) { message: Message ->
-                    database.messageDao.addMessageToChat(message)
-                    viewModelScope.launch {
-                        routeMessageToPi(message)
-                    }
-                }
-            chatWebSocket = client.newWebSocket(request, twitchChatListener)
-            _chatStatus.value = ChatStatus.CONNECTED
+            val intent = Intent(app.applicationContext, ChatService::class.java)
+            intent.putExtra("accessToken", it.auth.accessToken)
+            intent.putExtra("displayName", it.profile.displayName)
+            app.startService(intent)
         }
     }
 
@@ -276,14 +263,11 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
      */
     fun sendMessage(text: String) {
         user.value?.let {
-            chatWebSocket?.apply {
-                viewModelScope.launch {
-                    withContext(Dispatchers.IO) {
-                        send("PRIVMSG #${it.profile.displayName} :$text")
-                        database.messageDao.addMessageToChat(Message(MessageType.USER, text, it.profile.displayName))
-                    }
-                }
-            }
+            val intent = Intent(app.applicationContext, ChatService::class.java)
+            intent.action = "sendMessage"
+            intent.putExtra("displayName", it.profile.displayName)
+            intent.putExtra("text", text)
+            app.startService(intent)
         }
     }
 
@@ -291,9 +275,8 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
      * Safely disconnect from user's chat web socket.
      */
     fun disconnectFromChat() {
-        chatWebSocket?.close(NORMAL_CLOSURE_STATUS, null)
-        chatWebSocket = null
-        _chatStatus.value = ChatStatus.DISCONNECTED
+        val intent = Intent(app.applicationContext, ChatService::class.java)
+        app.stopService(intent)
     }
 
     /**

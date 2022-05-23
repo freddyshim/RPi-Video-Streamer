@@ -68,6 +68,7 @@
             android:resource="@array/preloaded_fonts" />
 
         <service android:name=".stream.StreamService" />
+        <service android:enabled="true" android:name=".chat.ChatService" />
     </application>
 
 </manifest>

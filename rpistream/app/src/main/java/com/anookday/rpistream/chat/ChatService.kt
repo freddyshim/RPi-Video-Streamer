@@ -8,18 +8,35 @@ import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbInterface
 import android.hardware.usb.UsbManager
 import android.os.IBinder
+import com.anookday.rpistream.repository.database.AppDatabase
 import com.anookday.rpistream.repository.database.Message
 import com.anookday.rpistream.repository.database.getDatabase
+import kotlinx.coroutines.*
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.WebSocket
 import timber.log.Timber
 
 class ChatService : Service() {
-    private val database = getDatabase(applicationContext)
-    private val usbManager = application.getSystemService(Context.USB_SERVICE) as UsbManager
+    private lateinit var database: AppDatabase
+    private lateinit var usbManager: UsbManager
+    private lateinit var scope: CoroutineScope
+    private var webSocket: WebSocket? = null
 
-    override fun onCreate() {
-        super.onCreate()
+    companion object {
+        var status: ChatStatus = ChatStatus.DISCONNECTED
+    }
+
+    /**
+     * Send a message to the chat web socket.
+     */
+    private fun sendMessage(displayName: String, text: String) {
+        webSocket?.apply {
+            send("PRIVMSG #$displayName :$text")
+            scope.launch {
+                database.messageDao.addMessageToChat(Message(MessageType.USER, text, displayName))
+            }
+        }
     }
 
     /**
@@ -58,26 +75,53 @@ class ChatService : Service() {
         }
     }
 
+    override fun onCreate() {
+        Timber.d("onCreate called")
+        super.onCreate()
+        scope = CoroutineScope(Job() + Dispatchers.IO)
+        database = getDatabase(applicationContext)
+        usbManager = application.getSystemService(Context.USB_SERVICE) as UsbManager
+
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val client = OkHttpClient()
-        val request = Request.Builder().url("wss://irc-ws.chat.twitch.tv:443").build()
-        intent?.extras?.getString("accessToken")?.let { accessToken ->
-            intent.extras?.getString("displayName")?.let { displayName ->
-                val twitchChatListener =
-                    TwitchChatListener(
-                        this,
-                        accessToken,
-                        displayName
-                    ) { message: Message ->
-                        database.messageDao.addMessageToChat(message)
-                        routeMessageToPi(message)
+        Timber.d("onStartCommand called")
+        when (intent?.action) {
+            "sendMessage" -> {
+                intent.extras?.getString("displayName")?.let { displayName ->
+                    intent.extras?.getString("text")?.let { text ->
+                        sendMessage(displayName, text)
                     }
+                }
+            }
+            else -> {
+                val client = OkHttpClient()
+                val request = Request.Builder().url("wss://irc-ws.chat.twitch.tv:443").build()
+                intent?.extras?.getString("accessToken")?.let { accessToken ->
+                    intent.extras?.getString("displayName")?.let { displayName ->
+                        val twitchChatListener =
+                            TwitchChatListener(
+                                this,
+                                accessToken,
+                                displayName
+                            ) { message: Message ->
+                                database.messageDao.addMessageToChat(message)
+                                routeMessageToPi(message)
+                            }
+                        webSocket = client.newWebSocket(request, twitchChatListener)
+                        status = ChatStatus.CONNECTED
+                    }
+                }
             }
         }
-        return super.onStartCommand(intent, flags, startId)
+        return START_STICKY
     }
 
     override fun onDestroy() {
+        Timber.d("onDestroy called")
+        webSocket?.close(NORMAL_CLOSURE_STATUS, null)
+        webSocket = null
+        status = ChatStatus.DISCONNECTED
         super.onDestroy()
     }
 

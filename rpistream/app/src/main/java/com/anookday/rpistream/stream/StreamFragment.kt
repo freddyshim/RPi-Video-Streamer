@@ -19,8 +19,9 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.anookday.rpistream.*
+import com.anookday.rpistream.chat.ChatService
+import com.anookday.rpistream.chat.ChatStatus
 import com.anookday.rpistream.chat.TwitchChatAdapter
-import com.anookday.rpistream.chat.TwitchChatItem
 import com.anookday.rpistream.databinding.FragmentStreamBinding
 import com.anookday.rpistream.repository.database.Message
 import com.anookday.rpistream.repository.database.User
@@ -352,10 +353,8 @@ class StreamFragment : Fragment() {
      */
     private fun observeUser(user: User?) {
         user?.let {
-            when (viewModel.chatStatus.value) {
-                ChatStatus.CONNECTED -> {
-                }
-                else -> viewModel.connectToChat()
+            if (ChatService.status == ChatStatus.DISCONNECTED) {
+                viewModel.connectToChat()
             }
         }
     }
