@@ -22,15 +22,15 @@ Stream footage from Twitch exported to YouTube:
 ## Raspberry Pi Setup
 
 ### 1. Enabling OTG
-We need to edit some files on Raspberry Pi's boot disk. Add the following line at the bottom of /boot/config.txt:
+We need to edit some files on Raspberry Pi's boot disk. Navigate to your Raspberry Pi image (eg. `/Volumes/boot` on Mac). Add the following line at the bottom of `config.txt`:
 ```
 dtoverlay=dwc2
 ```
-Add the following at the end of the line of /boot/cmdline.txt:
+In `cmdline.txt`, add the following after the word `rootwait`:
 ```
 modules-load=dwc2,libcomposite
 ```
-If you own a Raspberry Pi Zero W and would like to debug over a WiFi connection, run the following command in the /boot directory:
+To enable ssh over wifi, create a file called `ssh` in the `boot` image by running the command:
 ```
 touch ssh
 ```
@@ -63,8 +63,7 @@ sudo raspi-config
 ### 4. Configure Pi as a UVC Gadget
 Check out a forked version of uvc-gadget:
 ```
-cd /home/pi
-git clone https://github.com/climberhunt/uvc-gadget.git
+git clone https://github.com/peterbay/uvc-gadget
 ```
 This repository provides a script that creates a systemd service. To install this, copy the file to the specified location and enable it.
 ```
@@ -78,8 +77,8 @@ make
 ```
 Enable serial connection (for app-to-pi communication):
 ```
-sudo ln -s /lib/systemd/system/getty@.service /etc/systemd/system/getty.target.wants/getty@ttyGS0.service
-sudo systemctl enable getty@ttyGS0.service
+sudo systemctl stop getty@ttyGS0.service
+sudo systemctl disable getty@ttyGS0.service
 ```
 Restart your Raspberry Pi. Upon next boot, your Raspberry Pi should be set up as a USB camera gadget.
 
