@@ -9,6 +9,7 @@ import android.hardware.usb.UsbConstants
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbInterface
 import android.hardware.usb.UsbManager
+import android.os.Handler
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.anookday.rpistream.R
@@ -18,6 +19,8 @@ import com.anookday.rpistream.repository.database.getDatabase
 import com.anookday.rpistream.stream.STREAM_SERVICE_NAME
 import com.anookday.rpistream.stream.STREAM_SERVICE_NOTIFICATION_ID
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.WebSocket
@@ -25,13 +28,17 @@ import timber.log.Timber
 
 const val CHAT_SERVICE_NOTIFICATION_ID = 654321
 const val CHAT_SERVICE_NAME = "RPi Streamer | Chat Service"
+const val MESSAGE_DELAY = 3000L
 
 class ChatService : Service() {
     private lateinit var database: AppDatabase
     private lateinit var usbManager: UsbManager
     private lateinit var scope: CoroutineScope
+    private lateinit var handler: Handler
     private var webSocket: WebSocket? = null
     private var notificationManager: NotificationManager? = null
+    private var latestMessage: Message? = null
+    private val mutex = Mutex()
 
     companion object {
         var status: ChatStatus = ChatStatus.DISCONNECTED
@@ -90,6 +97,7 @@ class ChatService : Service() {
         super.onCreate()
         scope = CoroutineScope(Job() + Dispatchers.IO)
         database = getDatabase(applicationContext)
+        handler = Handler()
         usbManager = application.getSystemService(Context.USB_SERVICE) as UsbManager
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
@@ -130,11 +138,24 @@ class ChatService : Service() {
                                 accessToken,
                                 displayName
                             ) { message: Message ->
+                                latestMessage = message
                                 database.messageDao.addMessageToChat(message)
-                                routeMessageToPi(message)
                             }
                         webSocket = client.newWebSocket(request, twitchChatListener)
                         status = ChatStatus.CONNECTED
+
+                        handler.postDelayed(object : Runnable {
+                            override fun run() {
+                                latestMessage?.let { message ->
+                                    scope.launch {
+                                        mutex.withLock {
+                                            routeMessageToPi(message)
+                                        }
+                                    }
+                                    handler.postDelayed(this, MESSAGE_DELAY)
+                                }
+                            }
+                        }, MESSAGE_DELAY)
                     }
                 }
             }
