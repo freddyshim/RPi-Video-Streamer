@@ -13,6 +13,8 @@ import android.os.Handler
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.anookday.rpistream.R
+import com.anookday.rpistream.pi.CommandType
+import com.anookday.rpistream.pi.PiRouter
 import com.anookday.rpistream.repository.database.AppDatabase
 import com.anookday.rpistream.repository.database.Message
 import com.anookday.rpistream.repository.database.getDatabase
@@ -39,6 +41,7 @@ class ChatService : Service() {
     private var notificationManager: NotificationManager? = null
     private var latestMessage: Message? = null
     private val mutex = Mutex()
+    private val piRouter = PiRouter()
 
     companion object {
         var status: ChatStatus = ChatStatus.DISCONNECTED
@@ -64,31 +67,7 @@ class ChatService : Service() {
     private fun routeMessageToPi(message: Message) {
         Timber.d(message.toString())
         if (message.type == MessageType.USER) {
-            val deviceList = usbManager.deviceList
-            if (deviceList.isNotEmpty()) {
-                val device: UsbDevice = deviceList.values.elementAt(0)
-                if (usbManager.hasPermission(device)) {
-                    for (i in 0 until device.interfaceCount) {
-                        val intf: UsbInterface = device.getInterface(i)
-                        for (j in 0 until intf.endpointCount) {
-                            val ep = intf.getEndpoint(j)
-                            if (ep.direction == UsbConstants.USB_DIR_OUT) {
-                                val buffer = message.toString().toByteArray()
-                                Timber.d("deviceList $deviceList")
-                                Timber.d("device $device")
-                                Timber.d("intf $intf")
-                                Timber.d("ep $ep")
-                                Timber.d("sending message: ${buffer.toString()}")
-                                usbManager.openDevice(device)?.apply {
-                                    Timber.d("sending data...")
-                                    claimInterface(intf, true)
-                                    bulkTransfer(ep, buffer, buffer.size, 0)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            piRouter.routeCommand(usbManager, CommandType.CHAT, message.toString())
         }
     }
 
@@ -150,10 +129,11 @@ class ChatService : Service() {
                                     scope.launch {
                                         mutex.withLock {
                                             routeMessageToPi(message)
+                                            latestMessage = null
                                         }
                                     }
-                                    handler.postDelayed(this, MESSAGE_DELAY)
                                 }
+                                handler.postDelayed(this, MESSAGE_DELAY)
                             }
                         }, MESSAGE_DELAY)
                     }

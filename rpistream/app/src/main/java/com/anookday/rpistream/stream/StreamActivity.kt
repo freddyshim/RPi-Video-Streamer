@@ -17,6 +17,7 @@ import androidx.databinding.DataBindingUtil
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.Observer
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import com.anookday.rpistream.R
@@ -27,7 +28,9 @@ import com.anookday.rpistream.landing.LandingActivity
 import com.bumptech.glide.Glide
 import com.google.android.gms.oss.licenses.OssLicensesMenuActivity
 import kotlinx.android.synthetic.main.nav_header.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 /**
@@ -120,6 +123,11 @@ class StreamActivity : AppCompatActivity() {
                     finish()
                 }
             })
+            viewModelScope.launch {
+                withContext(Dispatchers.IO) {
+                    deleteChatHistory()
+                }
+            }
         }
 
         registerBluetooth()

@@ -280,35 +280,8 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
         app.stopService(intent)
     }
 
-    /**
-     * Send message string over usb connection to pi device.
-     *
-     * @param message object containing message string
-     */
-    private suspend fun routeMessageToPi(message: Message) {
-        withContext(Dispatchers.IO) {
-            if (message.type == MessageType.USER) {
-                val deviceList = usbManager.deviceList
-                if (deviceList.isNotEmpty()) {
-                    val device: UsbDevice = deviceList.values.elementAt(0)
-                    if (usbManager.hasPermission(device)) {
-                        for (i in 0 until device.interfaceCount) {
-                            val intf: UsbInterface = device.getInterface(i)
-                            for (j in 0 until intf.endpointCount) {
-                                val ep = intf.getEndpoint(j)
-                                if (ep.direction == UsbConstants.USB_DIR_OUT) {
-                                    val buffer = message.toString().toByteArray()
-                                    usbManager.openDevice(device)?.apply {
-                                        claimInterface(intf, true)
-                                        bulkTransfer(ep, buffer, buffer.size, 0)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+    fun deleteChatHistory() {
+        database.messageDao.deleteChat()
     }
 
     /**
