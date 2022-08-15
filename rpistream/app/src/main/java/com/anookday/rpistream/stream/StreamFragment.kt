@@ -109,6 +109,7 @@ class StreamFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         menu_fab.setOnClickListener(::onMenuFabClick)
+        ae_toggle_fab.setOnClickListener(::onAutoExposureToggleFabClick)
         video_fab.setOnClickListener(::onVideoFabClick)
         audio_fab.setOnClickListener(::onAudioFabClick)
         stream_fab.setOnClickListener(::onStreamFabClick)
@@ -119,6 +120,7 @@ class StreamFragment : Fragment() {
             usbStatus.observe(viewLifecycleOwner, ::observeUsbStatus)
             connectStatus.observe(viewLifecycleOwner, ::observeConnectStatus)
             authStatus.observe(viewLifecycleOwner, ::observeAuthStatus)
+            aeToggleStatus.observe(viewLifecycleOwner, ::observeAutoExposureToggleStatus)
             videoStatus.observe(viewLifecycleOwner, ::observeVideoStatus)
             audioStatus.observe(viewLifecycleOwner, ::observeAudioStatus)
             chatMessages.observe(viewLifecycleOwner, ::observeChatMessages)
@@ -170,6 +172,13 @@ class StreamFragment : Fragment() {
             duration = 300
             start()
         }
+    }
+
+    /**
+     * Click listener for auto exposure toggle fab.
+     */
+    private fun onAutoExposureToggleFabClick(view: View) {
+        viewModel.toggleAutoExposure()
     }
 
     /**
@@ -282,6 +291,23 @@ class StreamFragment : Fragment() {
                 RtmpAuthStatus.SUCCESS -> showMessage("Auth success")
                 RtmpAuthStatus.FAIL -> showMessage("Auth error")
             }
+        }
+    }
+
+    /**
+     * Observer for auto exposure toggle status [LiveData].
+     */
+    private fun observeAutoExposureToggleStatus(status: Boolean) {
+        if (status) {
+            ae_toggle_fab.backgroundTintList = ColorStateList.valueOf(
+                ContextCompat.getColor(requireContext(), R.color.colorAccent)
+            )
+            ae_toggle_fab_text.text = getText(R.string.ae_on_text)
+        } else {
+            ae_toggle_fab.backgroundTintList = ColorStateList.valueOf(
+                ContextCompat.getColor(requireContext(), R.color.colorPrimary)
+            )
+            ae_toggle_fab_text.text = getText(R.string.ae_off_text)
         }
     }
 

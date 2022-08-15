@@ -15,6 +15,8 @@ import com.anookday.rpistream.UserViewModel
 import com.anookday.rpistream.chat.*
 import com.anookday.rpistream.extensions.addNewItem
 import com.anookday.rpistream.oauth.TwitchManager
+import com.anookday.rpistream.pi.CommandType
+import com.anookday.rpistream.pi.PiRouter
 import com.anookday.rpistream.repository.database.Message
 import com.pedro.rtplibrary.util.BitrateAdapter
 import com.pedro.rtplibrary.view.OpenGlView
@@ -57,6 +59,9 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
     val currentFragment: LiveData<CurrentFragmentName>
         get() = _currentFragment
 
+    // rpi command router
+    private val piRouter = PiRouter()
+
     // twitch oauth manager
     private val twitchManager = TwitchManager(app.applicationContext, database)
 
@@ -83,6 +88,11 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
     private val _authStatus = MutableLiveData<RtmpAuthStatus>()
     val authStatus: LiveData<RtmpAuthStatus>
         get() = _authStatus
+
+    // video connection status
+    private val _aeToggleStatus = MutableLiveData<Boolean>(false)
+    val aeToggleStatus: LiveData<Boolean>
+        get() = _aeToggleStatus
 
     // video connection status
     private val _videoStatus = MutableLiveData<String?>()
@@ -164,6 +174,19 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
         viewModelScope.launch {
             StreamService.disableCamera()
             _videoStatus.value = null
+        }
+    }
+
+    /**
+     * Send a command to the connected video device to toggle auto exposure.
+     */
+    fun toggleAutoExposure() {
+        Timber.d("made it here")
+        _aeToggleStatus.value?.let {
+            val newToggleStatus = !it
+            val aeValue = if (newToggleStatus) "0" else "1"
+            piRouter.routeCommand(usbManager, CommandType.AUTO_EXPOSURE, aeValue)
+            _aeToggleStatus.value = newToggleStatus
         }
     }
 
