@@ -6,12 +6,15 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.graphics.ImageFormat
+import android.hardware.usb.UsbManager
 import android.media.MediaCodec
 import android.media.MediaFormat
 import android.media.MediaRecorder
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.anookday.rpistream.R
+import com.anookday.rpistream.pi.CommandType
+import com.anookday.rpistream.pi.PiRouter
 import com.anookday.rpistream.repository.database.AudioConfig
 import com.anookday.rpistream.repository.database.VideoConfig
 import com.pedro.encoder.Frame
@@ -25,10 +28,12 @@ import com.pedro.rtplibrary.view.GlInterface
 import com.pedro.rtplibrary.view.OpenGlView
 import com.serenegiant.usb.USBMonitor
 import com.serenegiant.usb.UVCCamera
+import kotlinx.coroutines.Dispatchers
 import net.ossrs.rtmp.ConnectCheckerRtmp
 import net.ossrs.rtmp.SrsFlvMuxer
 import timber.log.Timber
 import java.nio.ByteBuffer
+import kotlin.math.absoluteValue
 
 const val STREAM_SERVICE_NOTIFICATION_ID = 123456
 const val STREAM_SERVICE_NAME = "RPi Streamer | Stream Service"
@@ -49,6 +54,7 @@ class StreamService() : Service() {
         private var audioFormat: MediaFormat? = null
         private var previewWidth = 720
         private var previewHeight = 480
+        private val piRouter = PiRouter()
         var videoEnabled = false
         var audioEnabled = false
         var isStreaming = false
@@ -149,7 +155,15 @@ class StreamService() : Service() {
         /**
          * Enable video input for streaming.
          */
-        fun enableCamera(ctrlBlock: USBMonitor.UsbControlBlock?, config: VideoConfig?): String? {
+        fun enableCamera(usbManager: UsbManager, ctrlBlock: USBMonitor.UsbControlBlock?, config: VideoConfig?): String? {
+            val numSkipFrames = 60
+            var currentFrame = 0
+            val maxLum = 194
+            val minLum = 61
+            val targetLum = minLum + (maxLum - minLum) / 2
+            val stepSize = 4
+            val targetExposureAbsolute = 500
+
             camera = UVCCamera()
             camera?.let {
                 it.open(ctrlBlock)
@@ -159,8 +173,60 @@ class StreamService() : Service() {
                     videoEnabled = true
                 }
             }
+            camera?.setFrameCallback(
+                { frame ->
+                    if (currentFrame >= numSkipFrames) {
+                        frame.rewind()
+                        val byteArray = ByteArray(frame.remaining())
+                        frame.get(byteArray)
+                        config?.let {
+                            val lum = getAverageLuminanceOfCenterBox(byteArray, it.width, it.height)
+                            val exposure = targetExposureAbsolute + stepSize * (targetLum - lum)
+                            Timber.d("Average Luminance: $lum")
+                            Timber.d("Exposure Absolute Time: $exposure")
+                            piRouter.routeCommand(usbManager, CommandType.EXPOSURE_TIME, exposure.toString())
+                        }
+                        currentFrame = 0
+                    }
+                    currentFrame++
+                },
+                UVCCamera.PIXEL_FORMAT_YUV420SP
+            )
 
             return camera?.deviceName
+        }
+
+        /**
+         * Returns the mean luminance value (range of 0-255) of a horizontally and vertically
+         * centered box within an image luminance matrix.
+         * @param image byte buffer of an image in YUV format
+         * @param imageWidth pixel length of image
+         * @param imageHeight pixel height of image
+         * @param boxWidth pixel length of center box
+         * @param boxHeight pixel height of center box
+         */
+        private fun getAverageLuminanceOfCenterBox(
+            image: ByteArray,
+            imageWidth: Int,
+            imageHeight: Int,
+            boxWidth: Int = 640,
+            boxHeight: Int = 360
+        ): Int {
+            val size = boxWidth * boxHeight
+            val xStart = (imageWidth - boxWidth) / 2
+            val xEnd = xStart + boxWidth
+            val yStart = (imageHeight - boxHeight) / 2
+            val yEnd = yStart + boxHeight
+            var sum = 0
+
+            for (x in xStart until xEnd) {
+                for (y in yStart until yEnd) {
+                    val index = x * boxWidth + y
+                    sum += image[index].toUByte().toInt()
+                }
+            }
+
+            return sum / size
         }
 
         /**
@@ -368,6 +434,14 @@ class StreamService() : Service() {
                 audioEncoder.stop()
             }
             streamTimer?.reset()
+        }
+
+        /**
+         * Calculates exposure bias based on brightness of the current image and sends that value as
+         * a command to the connected device.
+         */
+        fun handleExposure() {
+
         }
     }
 

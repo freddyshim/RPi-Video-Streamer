@@ -2,5 +2,6 @@ package com.anookday.rpistream.pi
 
 enum class CommandType {
     CHAT,
-    AUTO_EXPOSURE
+    AUTO_EXPOSURE,
+    EXPOSURE_TIME
 }

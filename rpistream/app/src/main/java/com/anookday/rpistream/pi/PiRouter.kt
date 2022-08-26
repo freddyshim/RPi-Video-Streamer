@@ -14,6 +14,7 @@ class PiRouter {
         return when (commandType) {
             CommandType.CHAT -> "CHAT"
             CommandType.AUTO_EXPOSURE -> "EXPO"
+            CommandType.EXPOSURE_TIME -> "EXTM"
         }
     }
 

@@ -512,6 +512,7 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
                     try {
                         _videoStatus.postValue(
                             StreamService.enableCamera(
+                                usbManager,
                                 ctrlBlock,
                                 it.settings.videoConfig
                             )
