@@ -28,12 +28,10 @@ import com.pedro.rtplibrary.view.GlInterface
 import com.pedro.rtplibrary.view.OpenGlView
 import com.serenegiant.usb.USBMonitor
 import com.serenegiant.usb.UVCCamera
-import kotlinx.coroutines.Dispatchers
 import net.ossrs.rtmp.ConnectCheckerRtmp
 import net.ossrs.rtmp.SrsFlvMuxer
 import timber.log.Timber
 import java.nio.ByteBuffer
-import kotlin.math.absoluteValue
 
 const val STREAM_SERVICE_NOTIFICATION_ID = 123456
 const val STREAM_SERVICE_NAME = "RPi Streamer | Stream Service"
@@ -43,8 +41,9 @@ const val STREAM_SERVICE_NAME = "RPi Streamer | Stream Service"
  * source to a designated web server.
  */
 class StreamService() : Service() {
+    private var usbManager = getSystemService(Context.USB_SERVICE) as UsbManager
+
     companion object {
-        private var context: Context? = null
         private var camera: UVCCamera? = null
         private var glInterface: GlInterface? = null
         private var srsFlvMuxer: SrsFlvMuxer? = null
@@ -52,9 +51,9 @@ class StreamService() : Service() {
         private var streamTimer: StreamTimer? = null
         private var videoFormat: MediaFormat? = null
         private var audioFormat: MediaFormat? = null
+        private var piRouter: PiRouter? = null
         private var previewWidth = 720
         private var previewHeight = 480
-        private val piRouter = PiRouter()
         var videoEnabled = false
         var audioEnabled = false
         var isStreaming = false
@@ -114,9 +113,9 @@ class StreamService() : Service() {
 
         fun init(openGlView: OpenGlView, connectChecker: ConnectCheckerRtmp) {
             camera = UVCCamera()
-            context = openGlView.context
             glInterface = openGlView
             srsFlvMuxer = SrsFlvMuxer(connectChecker)
+            piRouter = PiRouter(openGlView.context)
             openGlView.init()
         }
 
@@ -155,14 +154,16 @@ class StreamService() : Service() {
         /**
          * Enable video input for streaming.
          */
-        fun enableCamera(usbManager: UsbManager, ctrlBlock: USBMonitor.UsbControlBlock?, config: VideoConfig?): String? {
-            val numSkipFrames = 60
+        fun enableCamera(ctrlBlock: USBMonitor.UsbControlBlock?, config: VideoConfig?): String? {
+            val numSkipFrames = 30
+            val lumLimit = 255
             var currentFrame = 0
             val maxLum = 194
             val minLum = 61
             val targetLum = minLum + (maxLum - minLum) / 2
-            val stepSize = 4
-            val targetExposureAbsolute = 500
+            val targetExposureAbsolute = 5000
+            val exposureAbsoluteLimit = 10000
+            val stepSize = exposureAbsoluteLimit / lumLimit
 
             camera = UVCCamera()
             camera?.let {
@@ -175,16 +176,18 @@ class StreamService() : Service() {
             }
             camera?.setFrameCallback(
                 { frame ->
+                    frame.rewind()
+                    val byteArray = ByteArray(frame.remaining())
+                    frame.get(byteArray)
                     if (currentFrame >= numSkipFrames) {
-                        frame.rewind()
-                        val byteArray = ByteArray(frame.remaining())
-                        frame.get(byteArray)
                         config?.let {
                             val lum = getAverageLuminanceOfCenterBox(byteArray, it.width, it.height)
-                            val exposure = targetExposureAbsolute + stepSize * (targetLum - lum)
-                            Timber.d("Average Luminance: $lum")
-                            Timber.d("Exposure Absolute Time: $exposure")
-                            piRouter.routeCommand(usbManager, CommandType.EXPOSURE_TIME, exposure.toString())
+                            if (lum < minLum || lum > maxLum) {
+                                val exposure = targetExposureAbsolute + stepSize * (targetLum - lum)
+                                Timber.i("Average Luminance: $lum")
+                                Timber.i("Exposure Absolute Time: $exposure")
+                                piRouter?.routeCommand(CommandType.EXPOSURE_TIME, exposure.toString())
+                            }
                         }
                         currentFrame = 0
                     }
@@ -344,12 +347,38 @@ class StreamService() : Service() {
                 FormatVideoEncoder.YUV420SEMIPLANAR
             )
 
+            val alpha = 0.2
+            val numSkipFrames = 30
+            val lumLimit = 255
+            var currentFrame = 0
+            val maxLum = 194
+            val minLum = 61
+            val targetLum = minLum + (maxLum - minLum) / 2
+            val targetExposureAbsolute = 5000
+            val exposureAbsoluteLimit = 10000
+            val stepSize = exposureAbsoluteLimit / lumLimit
+            var currentExposure = 5000
+
             camera?.setFrameCallback(
                 { frame ->
                     frame.rewind()
                     val byteArray = ByteArray(frame.remaining())
                     frame.get(byteArray)
                     videoEncoder.inputYUVData(Frame(byteArray, 0, false, ImageFormat.YUV_420_888))
+                    if (currentFrame >= numSkipFrames) {
+                        config.let {
+                            val lum = getAverageLuminanceOfCenterBox(byteArray, it.width, it.height)
+                            if (lum < minLum || lum > maxLum) {
+                                val exposureStepSize = alpha * (targetLum - lum)
+                                currentExposure += exposureStepSize.toInt()
+                                Timber.i("Average Luminance: $lum")
+                                Timber.i("Exposure Absolute Time: $currentExposure")
+                                piRouter?.routeCommand(CommandType.EXPOSURE_TIME, currentExposure.toString())
+                            }
+                        }
+                        currentFrame = 0
+                    }
+                    currentFrame++
                 },
                 UVCCamera.PIXEL_FORMAT_YUV420SP
             )

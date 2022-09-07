@@ -34,14 +34,13 @@ const val MESSAGE_DELAY = 3000L
 
 class ChatService : Service() {
     private lateinit var database: AppDatabase
-    private lateinit var usbManager: UsbManager
     private lateinit var scope: CoroutineScope
     private lateinit var handler: Handler
     private var webSocket: WebSocket? = null
     private var notificationManager: NotificationManager? = null
     private var latestMessage: Message? = null
+    private var piRouter: PiRouter? = null
     private val mutex = Mutex()
-    private val piRouter = PiRouter()
 
     companion object {
         var status: ChatStatus = ChatStatus.DISCONNECTED
@@ -67,7 +66,7 @@ class ChatService : Service() {
     private fun routeMessageToPi(message: Message) {
         Timber.d(message.toString())
         if (message.type == MessageType.USER) {
-            piRouter.routeCommand(usbManager, CommandType.CHAT, message.toString())
+            piRouter?.routeCommand(CommandType.CHAT, message.toString())
         }
     }
 
@@ -77,7 +76,6 @@ class ChatService : Service() {
         scope = CoroutineScope(Job() + Dispatchers.IO)
         database = getDatabase(applicationContext)
         handler = Handler()
-        usbManager = application.getSystemService(Context.USB_SERVICE) as UsbManager
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         val channel = NotificationChannel(
@@ -98,6 +96,7 @@ class ChatService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Timber.d("onStartCommand called")
+        piRouter = PiRouter(this)
         when (intent?.action) {
             "sendMessage" -> {
                 intent.extras?.getString("displayName")?.let { displayName ->

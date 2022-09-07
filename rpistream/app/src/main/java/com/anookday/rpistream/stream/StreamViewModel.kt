@@ -60,7 +60,7 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
         get() = _currentFragment
 
     // rpi command router
-    private val piRouter = PiRouter()
+    private val piRouter = PiRouter(app.applicationContext)
 
     // twitch oauth manager
     private val twitchManager = TwitchManager(app.applicationContext, database)
@@ -185,7 +185,7 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
         _aeToggleStatus.value?.let {
             val newToggleStatus = !it
             val aeValue = if (newToggleStatus) "0" else "1"
-            piRouter.routeCommand(usbManager, CommandType.AUTO_EXPOSURE, aeValue)
+            piRouter.routeCommand(CommandType.AUTO_EXPOSURE, aeValue)
             _aeToggleStatus.value = newToggleStatus
         }
     }
@@ -509,16 +509,17 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
             Timber.v("onDeviceConnectListener: Device connected")
             user.value?.let {
                 viewModelScope.launch {
-                    try {
-                        _videoStatus.postValue(
-                            StreamService.enableCamera(
-                                usbManager,
-                                ctrlBlock,
-                                it.settings.videoConfig
+                    withContext(Dispatchers.IO) {
+                        try {
+                            _videoStatus.postValue(
+                                StreamService.enableCamera(
+                                    ctrlBlock,
+                                    it.settings.videoConfig
+                                )
                             )
-                        )
-                    } catch (e: IllegalArgumentException) {
-                        disableCamera()
+                        } catch (e: IllegalArgumentException) {
+                            disableCamera()
+                        }
                     }
                 }
             }
