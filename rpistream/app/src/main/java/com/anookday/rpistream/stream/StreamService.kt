@@ -32,6 +32,8 @@ import net.ossrs.rtmp.ConnectCheckerRtmp
 import net.ossrs.rtmp.SrsFlvMuxer
 import timber.log.Timber
 import java.nio.ByteBuffer
+import kotlin.time.ExperimentalTime
+import kotlin.time.measureTimedValue
 
 const val STREAM_SERVICE_NOTIFICATION_ID = 123456
 const val STREAM_SERVICE_NAME = "RPi Streamer | Stream Service"
@@ -41,9 +43,8 @@ const val STREAM_SERVICE_NAME = "RPi Streamer | Stream Service"
  * source to a designated web server.
  */
 class StreamService() : Service() {
-    private var usbManager = getSystemService(Context.USB_SERVICE) as UsbManager
-
     companion object {
+        private var usbManager: UsbManager? = null
         private var camera: UVCCamera? = null
         private var glInterface: GlInterface? = null
         private var srsFlvMuxer: SrsFlvMuxer? = null
@@ -155,15 +156,8 @@ class StreamService() : Service() {
          * Enable video input for streaming.
          */
         fun enableCamera(ctrlBlock: USBMonitor.UsbControlBlock?, config: VideoConfig?): String? {
-            val numSkipFrames = 30
-            val lumLimit = 255
+            val numSkipFrames = 60
             var currentFrame = 0
-            val maxLum = 194
-            val minLum = 61
-            val targetLum = minLum + (maxLum - minLum) / 2
-            val targetExposureAbsolute = 5000
-            val exposureAbsoluteLimit = 10000
-            val stepSize = exposureAbsoluteLimit / lumLimit
 
             camera = UVCCamera()
             camera?.let {
@@ -179,25 +173,92 @@ class StreamService() : Service() {
                     frame.rewind()
                     val byteArray = ByteArray(frame.remaining())
                     frame.get(byteArray)
-                    if (currentFrame >= numSkipFrames) {
+                    // process image
+                    if (currentFrame > numSkipFrames) {
                         config?.let {
-                            val lum = getAverageLuminanceOfCenterBox(byteArray, it.width, it.height)
-                            if (lum < minLum || lum > maxLum) {
-                                val exposure = targetExposureAbsolute + stepSize * (targetLum - lum)
-                                Timber.i("Average Luminance: $lum")
-                                Timber.i("Exposure Absolute Time: $exposure")
-                                piRouter?.routeCommand(CommandType.EXPOSURE_TIME, exposure.toString())
-                            }
+                            processImage(byteArray, it)
                         }
                         currentFrame = 0
                     }
                     currentFrame++
+                    // stream video
+                    if (isStreaming) {
+                        videoEncoder.inputYUVData(Frame(byteArray, 0, false, ImageFormat.YUV_420_888))
+                    }
                 },
                 UVCCamera.PIXEL_FORMAT_YUV420SP
             )
 
             return camera?.deviceName
         }
+
+        @OptIn(ExperimentalTime::class)
+        fun processImage(byteArray: ByteArray, config: VideoConfig) {
+            val lumLimit = 255
+            val maxLum = 194
+            val minLum = 61
+            val targetLum = minLum + (maxLum - minLum) / 2
+            val targetExposureAbsolute = 5000
+            val exposureAbsoluteLimit = 10000
+            val stepSize = exposureAbsoluteLimit / lumLimit
+
+            val (lum, duration) = measureTimedValue {
+                getAverageLuminanceOfCenterBox(byteArray, config.width, config.height)
+                //getAvgLumWithNd4j(byteArray, config.width, config.height)
+                //getAvgLumWithMultik(byteArray, config.width, config.height)
+            }
+            Timber.d("Average Luminance: $lum")
+            Timber.d("Average luminance calculation time (ms): ${duration.inMilliseconds}")
+
+            if (lum < minLum || lum > maxLum) {
+                val exposure = targetExposureAbsolute + stepSize * (targetLum - lum)
+                Timber.d("Exposure Absolute Time: $exposure")
+                piRouter?.routeCommand(CommandType.EXPOSURE_TIME, exposure.toString())
+            }
+        }
+
+        //@OptIn(ExperimentalUnsignedTypes::class)
+        //private fun getAvgLumWithNd4j(
+        //    image: ByteArray,
+        //    imageWidth: Int,
+        //    imageHeight: Int,
+        //    boxWidth: Int = 640,
+        //    boxHeight: Int = 360
+        //): Int {
+        //    val size = boxWidth * boxHeight
+        //    val xStart = (imageWidth - boxWidth) / 2
+        //    val xEnd = xStart + boxWidth
+        //    val yStart = (imageHeight - boxHeight) / 2
+        //    val yEnd = yStart + boxHeight
+        //    var list: IntArray = intArrayOf()
+        //    for (i in 0..size) {
+        //        list += image[i].toUByte().toInt()
+        //    }
+        //    val arr: INDArray = Nd4j.createFromArray(list.toTypedArray())
+        //    val shape = intArrayOf(imageWidth, imageHeight)
+        //    arr.reshape(shape)
+        //    val box = arr.get(interval(xStart, xEnd), interval(yStart, yEnd))
+        //    return box.sumNumber().toByte().toUByte().toInt()
+        //}
+
+        //@OptIn(ExperimentalUnsignedTypes::class)
+        //private fun getAvgLumWithMultik(
+        //    image: ByteArray,
+        //    imageWidth: Int,
+        //    imageHeight: Int,
+        //    boxWidth: Int = 640,
+        //    boxHeight: Int = 360
+        //): Int {
+        //    val size = boxWidth * boxHeight
+        //    val xStart = (imageWidth - boxWidth) / 2
+        //    val xEnd = xStart + boxWidth
+        //    val yStart = (imageHeight - boxHeight) / 2
+        //    val yEnd = yStart + boxHeight
+        //    val img = mk.ndarray(image.toList().subList(0, size), imageWidth, imageHeight)
+        //    val box = img[xStart..xEnd, yStart..yEnd]
+        //    val sum: Byte = box.sum()
+        //    return sum.toUByte().toInt()
+        //}
 
         /**
          * Returns the mean luminance value (range of 0-255) of a horizontally and vertically
@@ -208,6 +269,7 @@ class StreamService() : Service() {
          * @param boxWidth pixel length of center box
          * @param boxHeight pixel height of center box
          */
+        @OptIn(ExperimentalUnsignedTypes::class)
         private fun getAverageLuminanceOfCenterBox(
             image: ByteArray,
             imageWidth: Int,
@@ -224,7 +286,7 @@ class StreamService() : Service() {
 
             for (x in xStart until xEnd) {
                 for (y in yStart until yEnd) {
-                    val index = x * boxWidth + y
+                    val index = y * imageWidth + x
                     sum += image[index].toUByte().toInt()
                 }
             }
@@ -328,15 +390,16 @@ class StreamService() : Service() {
          *
          * @return true if success, otherwise false.
          */
+        @OptIn(ExperimentalTime::class)
         private fun prepareVideo(config: VideoConfig?): Boolean {
             if (config == null) return false
 
-            if (isPreview) {
-                stopPreview()
-                isPreview = true
-            }
+            //if (isPreview) {
+            //    stopPreview()
+            //    isPreview = true
+            //}
 
-            val result = videoEncoder.prepareVideoEncoder(
+            return videoEncoder.prepareVideoEncoder(
                 config.width,
                 config.height,
                 config.fps,
@@ -346,44 +409,6 @@ class StreamService() : Service() {
                 config.iFrameInterval,
                 FormatVideoEncoder.YUV420SEMIPLANAR
             )
-
-            val alpha = 0.2
-            val numSkipFrames = 30
-            val lumLimit = 255
-            var currentFrame = 0
-            val maxLum = 194
-            val minLum = 61
-            val targetLum = minLum + (maxLum - minLum) / 2
-            val targetExposureAbsolute = 5000
-            val exposureAbsoluteLimit = 10000
-            val stepSize = exposureAbsoluteLimit / lumLimit
-            var currentExposure = 5000
-
-            camera?.setFrameCallback(
-                { frame ->
-                    frame.rewind()
-                    val byteArray = ByteArray(frame.remaining())
-                    frame.get(byteArray)
-                    videoEncoder.inputYUVData(Frame(byteArray, 0, false, ImageFormat.YUV_420_888))
-                    if (currentFrame >= numSkipFrames) {
-                        config.let {
-                            val lum = getAverageLuminanceOfCenterBox(byteArray, it.width, it.height)
-                            if (lum < minLum || lum > maxLum) {
-                                val exposureStepSize = alpha * (targetLum - lum)
-                                currentExposure += exposureStepSize.toInt()
-                                Timber.i("Average Luminance: $lum")
-                                Timber.i("Exposure Absolute Time: $currentExposure")
-                                piRouter?.routeCommand(CommandType.EXPOSURE_TIME, currentExposure.toString())
-                            }
-                        }
-                        currentFrame = 0
-                    }
-                    currentFrame++
-                },
-                UVCCamera.PIXEL_FORMAT_YUV420SP
-            )
-
-            return result
         }
 
         /**
@@ -477,6 +502,8 @@ class StreamService() : Service() {
     override fun onCreate() {
         super.onCreate()
         Timber.v("Stream service created")
+
+        usbManager = getSystemService(USB_SERVICE) as UsbManager
 
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val channel = NotificationChannel(
