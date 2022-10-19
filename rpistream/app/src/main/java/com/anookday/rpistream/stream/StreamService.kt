@@ -156,10 +156,12 @@ class StreamService() : Service() {
          * Enable video input for streaming.
          */
         fun enableCamera(ctrlBlock: USBMonitor.UsbControlBlock?, config: VideoConfig?): String? {
-            val numSkipFrames = 60
+            val numSkipFrames = 5
             var currentFrame = 0
+            var currentExposure = 500
 
             camera = UVCCamera()
+
             camera?.let {
                 it.open(ctrlBlock)
                 if (config != null) {
@@ -167,40 +169,43 @@ class StreamService() : Service() {
                     startPreview(config.width, config.height)
                     videoEnabled = true
                 }
-            }
-            camera?.setFrameCallback(
-                { frame ->
-                    frame.rewind()
-                    val byteArray = ByteArray(frame.remaining())
-                    frame.get(byteArray)
-                    // process image
-                    if (currentFrame > numSkipFrames) {
-                        config?.let {
-                            processImage(byteArray, it)
+                it.setFrameCallback(
+                    { frame ->
+                        frame.rewind()
+                        val byteArray = ByteArray(frame.remaining())
+                        frame.get(byteArray)
+                        // process image
+                        if (currentFrame >= numSkipFrames) {
+                            config?.let {
+                                currentExposure = processImage(byteArray, it, currentExposure)
+                            }
+                            currentFrame = 0
                         }
-                        currentFrame = 0
-                    }
-                    currentFrame++
-                    // stream video
-                    if (isStreaming) {
-                        videoEncoder.inputYUVData(Frame(byteArray, 0, false, ImageFormat.YUV_420_888))
-                    }
-                },
-                UVCCamera.PIXEL_FORMAT_YUV420SP
-            )
+                        currentFrame++
+                        // stream video
+                        if (isStreaming) {
+                            videoEncoder.inputYUVData(Frame(byteArray, 0, false, ImageFormat.YUV_420_888))
+                        }
+                    },
+                    UVCCamera.PIXEL_FORMAT_YUV420SP
+                )
+            }
 
             return camera?.deviceName
         }
 
         @OptIn(ExperimentalTime::class)
-        fun processImage(byteArray: ByteArray, config: VideoConfig) {
+        fun processImage(byteArray: ByteArray, config: VideoConfig, currentExposure: Int): Int {
             val lumLimit = 255
             val maxLum = 194
             val minLum = 61
             val targetLum = minLum + (maxLum - minLum) / 2
-            val targetExposureAbsolute = 5000
-            val exposureAbsoluteLimit = 10000
-            val stepSize = exposureAbsoluteLimit / lumLimit
+            val targetExposureAbsolute = 500
+            val exposureAbsoluteMinimum = 15
+            val exposureAbsoluteLimit = 1000
+            val alpha = 0.25f
+            val scale = exposureAbsoluteLimit / lumLimit
+            var exposure = currentExposure
 
             val (lum, duration) = measureTimedValue {
                 getAverageLuminanceOfCenterBox(byteArray, config.width, config.height)
@@ -211,10 +216,14 @@ class StreamService() : Service() {
             Timber.d("Average luminance calculation time (ms): ${duration.inMilliseconds}")
 
             if (lum < minLum || lum > maxLum) {
-                val exposure = targetExposureAbsolute + stepSize * (targetLum - lum)
+                exposure = (currentExposure + alpha * (scale * (targetLum - lum))).toInt()
+                if (exposure > exposureAbsoluteLimit) exposure = exposureAbsoluteLimit
+                else if (exposure < exposureAbsoluteMinimum) exposure = exposureAbsoluteMinimum
                 Timber.d("Exposure Absolute Time: $exposure")
                 piRouter?.routeCommand(CommandType.EXPOSURE_TIME, exposure.toString())
             }
+
+            return exposure
         }
 
         //@OptIn(ExperimentalUnsignedTypes::class)
@@ -301,6 +310,7 @@ class StreamService() : Service() {
             if (isStreaming) stopStream()
             if (isPreview) stopPreview()
             camera?.destroy()
+            camera = null
             videoEnabled = false
         }
 
@@ -393,11 +403,6 @@ class StreamService() : Service() {
         @OptIn(ExperimentalTime::class)
         private fun prepareVideo(config: VideoConfig?): Boolean {
             if (config == null) return false
-
-            //if (isPreview) {
-            //    stopPreview()
-            //    isPreview = true
-            //}
 
             return videoEncoder.prepareVideoEncoder(
                 config.width,
