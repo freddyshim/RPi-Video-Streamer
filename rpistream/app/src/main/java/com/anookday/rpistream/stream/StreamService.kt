@@ -200,7 +200,6 @@ class StreamService() : Service() {
             val maxLum = 194
             val minLum = 61
             val targetLum = minLum + (maxLum - minLum) / 2
-            val targetExposureAbsolute = 500
             val exposureAbsoluteMinimum = 15
             val exposureAbsoluteLimit = 1000
             val alpha = 0.25f

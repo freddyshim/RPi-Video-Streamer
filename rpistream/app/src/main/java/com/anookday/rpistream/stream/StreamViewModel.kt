@@ -89,7 +89,12 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
     val authStatus: LiveData<RtmpAuthStatus>
         get() = _authStatus
 
-    // video connection status
+    // selfie cam toggle status
+    private val _selfieToggleStatus = MutableLiveData<Boolean>(false)
+    val selfieToggleStatus: LiveData<Boolean>
+        get() = _selfieToggleStatus
+
+    // auto exposure toggle status
     private val _aeToggleStatus = MutableLiveData<Boolean>(false)
     val aeToggleStatus: LiveData<Boolean>
         get() = _aeToggleStatus
@@ -180,8 +185,17 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
     /**
      * Send a command to the connected video device to toggle auto exposure.
      */
+    fun toggleSelfieCam() {
+        _selfieToggleStatus.value?.let {
+            val newToggleStatus = !it
+            _selfieToggleStatus.value = newToggleStatus
+        }
+    }
+
+    /**
+     * Send a command to the connected video device to toggle auto exposure.
+     */
     fun toggleAutoExposure() {
-        Timber.d("made it here")
         _aeToggleStatus.value?.let {
             val newToggleStatus = !it
             val aeValue = if (newToggleStatus) "0" else "1"

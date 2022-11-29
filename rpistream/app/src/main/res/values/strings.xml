@@ -15,8 +15,11 @@
     <string name="nav_settings">Settings</string>
     <string name="nav_logout">Log Out</string>
     <!-- STREAM -->
+    <string name="selfie_off_text">Selfie Cam Off</string>
+    <string name="selfie_on_text">Selfie Cam On</string>
     <string name="ae_off_text">Auto Exposure Off</string>
     <string name="ae_on_text">Auto Exposure On</string>
+    <string name="ae_toggle_fab_description">Button to toggle auto exposure</string>
     <string name="video_off_text">Video not connected</string>
     <string name="audio_on_text">Audio connected</string>
     <string name="audio_off_text">Audio not connected</string>
@@ -97,5 +100,4 @@
     <string name="developer_mode_title">Developer Mode</string>
     <string name="developer_mode_subtitle">Toggle on-screen debugging and statistics</string>
     <string name="licenses">Licenses</string>
-    <string name="ae_toggle_fab_description">Button to toggle auto exposure</string>
 </resources>

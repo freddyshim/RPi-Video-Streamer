@@ -109,6 +109,7 @@ class StreamFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         menu_fab.setOnClickListener(::onMenuFabClick)
+        selfie_fab.setOnClickListener(::onSelfieFabClick)
         ae_toggle_fab.setOnClickListener(::onAutoExposureToggleFabClick)
         video_fab.setOnClickListener(::onVideoFabClick)
         audio_fab.setOnClickListener(::onAudioFabClick)
@@ -120,6 +121,7 @@ class StreamFragment : Fragment() {
             usbStatus.observe(viewLifecycleOwner, ::observeUsbStatus)
             connectStatus.observe(viewLifecycleOwner, ::observeConnectStatus)
             authStatus.observe(viewLifecycleOwner, ::observeAuthStatus)
+            selfieToggleStatus.observe(viewLifecycleOwner, ::observeSelfieStatus)
             aeToggleStatus.observe(viewLifecycleOwner, ::observeAutoExposureToggleStatus)
             videoStatus.observe(viewLifecycleOwner, ::observeVideoStatus)
             audioStatus.observe(viewLifecycleOwner, ::observeAudioStatus)
@@ -172,6 +174,13 @@ class StreamFragment : Fragment() {
             duration = 300
             start()
         }
+    }
+
+    /**
+     * Click listener for selfie fab.
+     */
+    private fun onSelfieFabClick(view: View) {
+        viewModel.toggleSelfieCam()
     }
 
     /**
@@ -291,6 +300,23 @@ class StreamFragment : Fragment() {
                 RtmpAuthStatus.SUCCESS -> showMessage("Auth success")
                 RtmpAuthStatus.FAIL -> showMessage("Auth error")
             }
+        }
+    }
+
+    /**
+     * Observer for selfie status [LiveData].
+     */
+    private fun observeSelfieStatus(status: Boolean) {
+        if (status) {
+            selfie_fab.backgroundTintList = ColorStateList.valueOf(
+                ContextCompat.getColor(requireContext(), R.color.colorAccent)
+            )
+            selfie_fab_text.text = getText(R.string.selfie_on_text)
+        } else {
+            selfie_fab.backgroundTintList = ColorStateList.valueOf(
+                ContextCompat.getColor(requireContext(), R.color.colorPrimary)
+            )
+            selfie_fab_text.text = getText(R.string.selfie_off_text)
         }
     }
 
