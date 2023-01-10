@@ -7,6 +7,7 @@ import android.hardware.usb.UsbConstants
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbInterface
 import android.hardware.usb.UsbManager
+import android.opengl.GLSurfaceView
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
@@ -71,6 +72,9 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
     // usb manager
     var usbManager = app.getSystemService(Context.USB_SERVICE) as UsbManager
 
+    // GLSurfaceView renderer
+    private var viewRenderer: StreamGLRenderer? = null
+
     // USB monitor object used to control connected USB devices
     private var usbMonitor: USBMonitor? = null
 
@@ -122,9 +126,10 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
      * @param context Activity context
      * @param cameraView OpenGL surface view that displays the camera
      */
-    fun init(context: Context, cameraView: OpenGlView) {
+    fun init(context: Context, piCameraView: OpenGlView, cameraView: StreamGLSurfaceView) {
         usbMonitor = USBMonitor(context, onDeviceConnectListener)
-        StreamService.init(cameraView, connectCheckerRtmp)
+        viewRenderer = cameraView.renderer
+        StreamService.init(piCameraView, cameraView, connectCheckerRtmp)
         registerUsbMonitor()
         connectToChat()
     }
@@ -189,6 +194,10 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
         _selfieToggleStatus.value?.let {
             val newToggleStatus = !it
             _selfieToggleStatus.value = newToggleStatus
+
+            viewRenderer?.let { renderer ->
+                if (newToggleStatus) renderer.openCamera() else renderer.closeCamera()
+            }
         }
     }
 

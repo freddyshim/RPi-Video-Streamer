@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.media.AudioManager
+import android.opengl.GLSurfaceView
 import android.os.Bundle
 import android.provider.Settings
 import android.view.MenuItem

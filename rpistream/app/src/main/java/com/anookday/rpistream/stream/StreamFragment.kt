@@ -4,6 +4,10 @@ import android.Manifest
 import android.animation.ObjectAnimator
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
+import android.graphics.ImageFormat
+import android.graphics.PixelFormat
+import android.graphics.SurfaceTexture
+import android.opengl.GLSurfaceView
 import android.os.Bundle
 import android.transition.TransitionManager
 import android.view.animation.OvershootInterpolator
@@ -38,6 +42,7 @@ class StreamFragment : Fragment() {
     private lateinit var binding: FragmentStreamBinding
     private lateinit var chatAdapter: TwitchChatAdapter
     private val viewModel: StreamViewModel by activityViewModels()
+    private lateinit var preview: StreamGLSurfaceView
 
     // fab animation
     private lateinit var fabConstraintOn: ConstraintSet
@@ -56,6 +61,14 @@ class StreamFragment : Fragment() {
                 showMessage("audioRequestPermissionLauncher: Record audio permission denied")
             }
         }
+
+    private val cameraRequestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
+        if (isGranted) {
+            // TODO
+        } else {
+            showMessage("cameraRequestPermissionLauncher: Camera permission denied")
+        }
+    }
 
     /**
      * SurfaceView callback object
@@ -89,18 +102,34 @@ class StreamFragment : Fragment() {
         fabTransition = ChangeBounds().apply { interpolator = OvershootInterpolator(1.0F) }
         isMenuPressed = false
 
-        binding = FragmentStreamBinding.inflate(inflater, container, false).apply {
-            chatMessages.apply {
-                setHasFixedSize(true)
-                layoutManager = LinearLayoutManager(context)
-                adapter = chatAdapter
+        try {
+            binding = FragmentStreamBinding.inflate(inflater, container, false).apply {
+                chatMessages.apply {
+                    setHasFixedSize(true)
+                    layoutManager = LinearLayoutManager(context)
+                    adapter = chatAdapter
+                }
+
+                cameraPreviewHidden.apply {
+                    holder.apply {
+                        setFormat(ImageFormat.YUV_420_888)
+                        addCallback(surfaceViewCallback)
+                    }
+                }
+
+                // init GLSurfaceView
+                preview = cameraPreview
+
+                viewModel.apply {
+                    init(requireContext(), cameraPreviewHidden, cameraPreview)
+                }
+
             }
-            cameraPreview.holder.addCallback(surfaceViewCallback)
+        } catch (e: Exception) {
+            Timber.e(e)
         }
 
-        viewModel.apply {
-            init(requireContext(), binding.cameraPreview)
-        }
+        cameraRequestPermissionLauncher.launch(Manifest.permission.CAMERA)
 
         return binding.root
     }
@@ -138,13 +167,19 @@ class StreamFragment : Fragment() {
             true
         )
         super.onResume()
+        preview.onResume()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        preview.onPause()
     }
 
     override fun onStop() {
-        binding.cameraPreview.apply {
-            removeMediaCodecSurface()
-            stop()
-        }
+        //binding.cameraPreview.apply {
+            //removeMediaCodecSurface()
+            //stop()
+        //}
         super.onStop()
     }
 

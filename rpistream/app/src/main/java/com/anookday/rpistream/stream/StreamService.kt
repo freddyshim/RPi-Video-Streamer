@@ -6,11 +6,14 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.graphics.ImageFormat
+import android.graphics.SurfaceTexture
 import android.hardware.usb.UsbManager
 import android.media.MediaCodec
 import android.media.MediaFormat
 import android.media.MediaRecorder
+import android.opengl.GLSurfaceView
 import android.os.IBinder
+import android.view.SurfaceHolder
 import androidx.core.app.NotificationCompat
 import com.anookday.rpistream.R
 import com.anookday.rpistream.pi.CommandType
@@ -47,6 +50,8 @@ class StreamService() : Service() {
         private var usbManager: UsbManager? = null
         private var camera: UVCCamera? = null
         private var glInterface: GlInterface? = null
+        private var surfaceHolder: SurfaceHolder? = null
+        private var mainSurfaceView: StreamGLSurfaceView? = null
         private var srsFlvMuxer: SrsFlvMuxer? = null
         private var notificationManager: NotificationManager? = null
         private var streamTimer: StreamTimer? = null
@@ -112,12 +117,15 @@ class StreamService() : Service() {
         private val microphoneManager: MicrophoneManager =
             MicrophoneManager { frame -> audioEncoder.inputPCMData(frame) }
 
-        fun init(openGlView: OpenGlView, connectChecker: ConnectCheckerRtmp) {
-            camera = UVCCamera()
-            glInterface = openGlView
+        fun init(piCameraView: OpenGlView, glSurfaceView: StreamGLSurfaceView, connectChecker: ConnectCheckerRtmp) {
+            val newCamera = UVCCamera()
+            camera = newCamera
+            glInterface = piCameraView
+            surfaceHolder = piCameraView.holder
+            mainSurfaceView = glSurfaceView
             srsFlvMuxer = SrsFlvMuxer(connectChecker)
-            piRouter = PiRouter(openGlView.context)
-            openGlView.init()
+            piRouter = PiRouter(piCameraView.context)
+            piCameraView.init()
         }
 
         /**
@@ -129,34 +137,27 @@ class StreamService() : Service() {
         fun startPreview(width: Int?, height: Int?) {
             if (width != null) previewWidth = width
             if (height != null) previewHeight = height
-            glInterface?.let { intf ->
-                intf.setEncoderSize(previewWidth, previewHeight)
-                intf.setRotation(0)
-                intf.start()
-                camera?.let { cam ->
-                    cam.setPreviewTexture(intf.surfaceTexture)
-                    cam.startPreview()
-                }
-                isPreview = true
-                Timber.v("RPISTREAM preview enabled")
+            camera?.let {
+                mainSurfaceView?.renderer?.startPiCameraPreview(it, previewWidth, previewHeight)
             }
+            isPreview = true
+            Timber.v("RPISTREAM preview enabled")
         }
 
         /**
          * Stop camera preview if preview is currently enabled.
          */
         fun stopPreview() {
-            Timber.v("RPISTREAM preview disabled")
-            glInterface?.stop()
-            camera?.stopPreview()
+            mainSurfaceView?.renderer?.stopPiCameraPreview()
             isPreview = false
+            Timber.v("RPISTREAM preview disabled")
         }
 
         /**
          * Enable video input for streaming.
          */
         fun enableCamera(ctrlBlock: USBMonitor.UsbControlBlock?, config: VideoConfig?): String? {
-            val numSkipFrames = 5
+            val numSkipFrames = 30
             var currentFrame = 0
             var currentExposure = 500
 
@@ -371,20 +372,20 @@ class StreamService() : Service() {
         private fun startEncoders() {
             if (videoEnabled) {
                 videoEncoder.start()
-                glInterface?.let { intf ->
-                    intf.stop()
-                    intf.setEncoderSize(videoEncoder.width, videoEncoder.height)
-                    intf.setRotation(0)
-                    intf.start()
-                    camera?.let { cam ->
-                        cam.setPreviewTexture(intf.surfaceTexture)
-                        cam.startPreview()
-                        if (videoEncoder.inputSurface != null) {
-                            intf.addMediaCodecSurface(videoEncoder.inputSurface)
-                        }
-                        isPreview = true
-                    }
-                }
+                //glInterface?.let { intf ->
+                //    intf.stop()
+                //    intf.setEncoderSize(videoEncoder.width, videoEncoder.height)
+                //    intf.setRotation(0)
+                //    intf.start()
+                //    camera?.let { cam ->
+                //        cam.setPreviewTexture(intf.surfaceTexture)
+                //        cam.startPreview()
+                //        if (videoEncoder.inputSurface != null) {
+                //            intf.addMediaCodecSurface(videoEncoder.inputSurface)
+                //        }
+                //        isPreview = true
+                //    }
+                //}
             }
             if (audioEnabled) {
                 audioEncoder.start()
@@ -449,34 +450,34 @@ class StreamService() : Service() {
         /**
          * Set GlInterface. If one exists, replace the old one with the new GlInterface.
          */
-        fun setGlInterface(newGlInterface: GlInterface) {
-            if (isPreview || isStreaming) {
-                glInterface?.let {
-                    it.removeMediaCodecSurface()
-                    it.stop()
-                }
-                glInterface = newGlInterface
-                prepareGlView()
-            } else {
-                glInterface = newGlInterface
-                newGlInterface.init()
-            }
-        }
+        //fun setGlInterface(newGlInterface: GlInterface) {
+        //    if (isPreview || isStreaming) {
+        //        glInterface?.let {
+        //            it.removeMediaCodecSurface()
+        //            it.stop()
+        //        }
+        //        glInterface = newGlInterface
+        //        prepareGlView()
+        //    } else {
+        //        glInterface = newGlInterface
+        //        newGlInterface.init()
+        //    }
+        //}
 
         /**
          * Prepare GlInterface.
          */
-        private fun prepareGlView() {
-            glInterface?.let {
-                if (videoEncoder.rotation == 90 || videoEncoder.rotation == 270) {
-                    it.setEncoderSize(videoEncoder.height, videoEncoder.width)
-                } else {
-                    it.setEncoderSize(videoEncoder.width, videoEncoder.height)
-                }
-                it.start()
-                it.addMediaCodecSurface(videoEncoder.inputSurface)
-            }
-        }
+        //private fun prepareGlView() {
+        //    glInterface?.let {
+        //        if (videoEncoder.rotation == 90 || videoEncoder.rotation == 270) {
+        //            it.setEncoderSize(videoEncoder.height, videoEncoder.width)
+        //        } else {
+        //            it.setEncoderSize(videoEncoder.width, videoEncoder.height)
+        //        }
+        //        it.start()
+        //        it.addMediaCodecSurface(videoEncoder.inputSurface)
+        //    }
+        //}
 
         /**
          * Stops the stream.
@@ -486,20 +487,12 @@ class StreamService() : Service() {
                 isStreaming = false
                 srsFlvMuxer?.stop()
             }
-            glInterface?.let {
-                it.removeMediaCodecSurface()
-                videoEncoder.stop()
-                audioEncoder.stop()
-            }
+            //glInterface?.let {
+            //    it.removeMediaCodecSurface()
+            //    videoEncoder.stop()
+            //    audioEncoder.stop()
+            //}
             streamTimer?.reset()
-        }
-
-        /**
-         * Calculates exposure bias based on brightness of the current image and sends that value as
-         * a command to the connected device.
-         */
-        fun handleExposure() {
-
         }
     }
 
