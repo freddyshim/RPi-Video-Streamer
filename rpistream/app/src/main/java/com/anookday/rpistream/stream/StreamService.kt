@@ -64,6 +64,7 @@ class StreamService() : Service() {
         var audioEnabled = false
         var isStreaming = false
         var isPreview = false
+        var isAeEnabled = false
 
         var videoBitrate: Int
             get() = videoEncoder.bitRate
@@ -176,13 +177,15 @@ class StreamService() : Service() {
                         val byteArray = ByteArray(frame.remaining())
                         frame.get(byteArray)
                         // process image
-                        if (currentFrame >= numSkipFrames) {
-                            config?.let {
-                                currentExposure = processImage(byteArray, it, currentExposure)
+                        if (isAeEnabled) {
+                            if (currentFrame >= numSkipFrames) {
+                                config?.let {
+                                    currentExposure = processImage(byteArray, it, currentExposure)
+                                }
+                                currentFrame = 0
                             }
-                            currentFrame = 0
+                            currentFrame++
                         }
-                        currentFrame++
                         // stream video
                         if (isStreaming) {
                             videoEncoder.inputYUVData(Frame(byteArray, 0, false, ImageFormat.YUV_420_888))

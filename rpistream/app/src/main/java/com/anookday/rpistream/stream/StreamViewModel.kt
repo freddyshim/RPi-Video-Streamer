@@ -210,6 +210,7 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
             val aeValue = if (newToggleStatus) "0" else "1"
             piRouter.routeCommand(CommandType.AUTO_EXPOSURE, aeValue)
             _aeToggleStatus.value = newToggleStatus
+            StreamService.isAeEnabled = !StreamService.isAeEnabled
         }
     }
 
