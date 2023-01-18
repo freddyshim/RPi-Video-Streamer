@@ -196,7 +196,7 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
             _selfieToggleStatus.value = newToggleStatus
 
             viewRenderer?.let { renderer ->
-                if (newToggleStatus) renderer.openCamera() else renderer.closeCamera()
+                if (newToggleStatus) renderer.startFrontCameraPreview() else renderer.stopFrontCameraPreview()
             }
         }
     }
@@ -207,8 +207,6 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
     fun toggleAutoExposure() {
         _aeToggleStatus.value?.let {
             val newToggleStatus = !it
-            val aeValue = if (newToggleStatus) "0" else "1"
-            piRouter.routeCommand(CommandType.AUTO_EXPOSURE, aeValue)
             _aeToggleStatus.value = newToggleStatus
             StreamService.isAeEnabled = !StreamService.isAeEnabled
         }

@@ -7,11 +7,11 @@ import android.hardware.camera2.*
 import android.opengl.GLES11Ext
 import android.opengl.GLES30
 import android.opengl.GLSurfaceView
+import android.opengl.Matrix
 import android.os.Handler
 import android.os.HandlerThread
 import android.util.Size
 import android.view.Surface
-import android.view.SurfaceHolder
 import com.serenegiant.usb.UVCCamera
 import timber.log.Timber
 import java.nio.ByteBuffer
@@ -21,6 +21,7 @@ import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
+import kotlin.math.sqrt
 
 
 class StreamGLRenderer(view: StreamGLSurfaceView) : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailableListener {
@@ -28,9 +29,10 @@ class StreamGLRenderer(view: StreamGLSurfaceView) : GLSurfaceView.Renderer, Surf
             attribute vec2 vPosition;
             attribute vec2 vTexCoord;
             varying vec2 texCoord;
+            uniform mat4 transform;
             void main() {
               texCoord = vTexCoord;
-              gl_Position = vec4 ( vPosition.x, vPosition.y, 0.0, 1.0 );
+              gl_Position = transform * vec4(vPosition.x, vPosition.y, 0.0, 1.0);
             }"""
 
     private val fss_default = """
@@ -43,11 +45,13 @@ class StreamGLRenderer(view: StreamGLSurfaceView) : GLSurfaceView.Renderer, Surf
             }"""
 
     private lateinit var hTex: IntArray
-    private lateinit var pVertex: FloatBuffer
-    private lateinit var pTexCoord: FloatBuffer
+    private var pVertex: FloatBuffer
+    private var pTexCoord: FloatBuffer
+    private var transform: FloatArray
     private var hProgram = 0
 
-    private lateinit var mSTexture: SurfaceTexture
+    private lateinit var mSTexturePi: SurfaceTexture
+    private lateinit var mSTextureFront: SurfaceTexture
 
     private var mGLInit = false
     private var mUpdateST = false
@@ -58,20 +62,19 @@ class StreamGLRenderer(view: StreamGLSurfaceView) : GLSurfaceView.Renderer, Surf
     private var mCaptureSession: CameraCaptureSession? = null
     private var mPreviewRequestBuilder: CaptureRequest.Builder? = null
     private var mCameraID: String? = null
-    private var mPreviewSize: Size = Size(1920, 1080)
+    private var mPreviewSize: Size = Size(640, 480)
 
     private var mPiCamera: UVCCamera? = null
-    private var mPiSurfaceHolder: SurfaceHolder? = null
 
     private var mBackgroundThread: HandlerThread? = null
     private var mBackgroundHandler: Handler? = null
     private val mCameraOpenCloseLock: Semaphore = Semaphore(1)
 
+    private var isFrontCameraOn = false
+
     init {
         mView = view
         val vtmp = floatArrayOf(1.0f, -1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f)
-        //val vtmp = floatArrayOf( -1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f)
-        //val vtmp = floatArrayOf( 1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f)
         val ttmp = floatArrayOf(1.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f)
         pVertex = ByteBuffer.allocateDirect(8 * 4).order(ByteOrder.nativeOrder()).asFloatBuffer()
         pVertex.put(vtmp)
@@ -79,6 +82,7 @@ class StreamGLRenderer(view: StreamGLSurfaceView) : GLSurfaceView.Renderer, Surf
         pTexCoord = ByteBuffer.allocateDirect(8 * 4).order(ByteOrder.nativeOrder()).asFloatBuffer()
         pTexCoord.put(ttmp)
         pTexCoord.position(0)
+        transform = FloatArray(16)
     }
 
     fun onResume() {
@@ -88,14 +92,17 @@ class StreamGLRenderer(view: StreamGLSurfaceView) : GLSurfaceView.Renderer, Surf
     fun onPause() {
         mGLInit = false
         mUpdateST = false
-        closeCamera()
+        stopFrontCameraPreview()
         stopBackgroundThread()
     }
 
     override fun onSurfaceCreated(unused: GL10, config: EGLConfig) {
         initTex()
-        mSTexture = SurfaceTexture(hTex[0])
-        mSTexture.setOnFrameAvailableListener(this)
+        mSTexturePi = SurfaceTexture(hTex[0])
+        mSTexturePi.setOnFrameAvailableListener(this)
+
+        mSTextureFront = SurfaceTexture(hTex[1])
+        mSTextureFront.setOnFrameAvailableListener(this)
 
         GLES30.glClearColor(1.0f, 1.0f, 1.0f, 1.0f)
 
@@ -105,7 +112,6 @@ class StreamGLRenderer(view: StreamGLSurfaceView) : GLSurfaceView.Renderer, Surf
         mView!!.display.getRealSize(ss)
 
         cacPreviewSize(ss.x, ss.y)
-        //openCamera()
 
         mGLInit = true
     }
@@ -118,7 +124,7 @@ class StreamGLRenderer(view: StreamGLSurfaceView) : GLSurfaceView.Renderer, Surf
      */
     fun startPiCameraPreview(camera: UVCCamera, width: Int?, height: Int?) {
         mPiCamera = camera
-        val surface = Surface(mSTexture)
+        val surface = Surface(mSTexturePi)
         camera.setPreviewDisplay(surface)
         camera.startPreview()
     }
@@ -138,7 +144,7 @@ class StreamGLRenderer(view: StreamGLSurfaceView) : GLSurfaceView.Renderer, Surf
                 for (psize in map!!.getOutputSizes(SurfaceTexture::class.java)) {
                     Timber.d("${psize.width}x${psize.height}")
                     if (width == psize.width && height == psize.height) {
-                        mPreviewSize = psize
+                        //mPreviewSize = psize
                         break
                     }
                 }
@@ -153,7 +159,7 @@ class StreamGLRenderer(view: StreamGLSurfaceView) : GLSurfaceView.Renderer, Surf
         }
     }
 
-    fun openCamera() {
+    fun startFrontCameraPreview() {
         val manager = mView!!.context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
         try {
             val characteristics = manager.getCameraCharacteristics(mCameraID!!)
@@ -161,6 +167,7 @@ class StreamGLRenderer(view: StreamGLSurfaceView) : GLSurfaceView.Renderer, Surf
                 throw RuntimeException("Time out waiting to lock camera opening.")
             }
             manager.openCamera(mCameraID!!, mStateCallback, mBackgroundHandler)
+            isFrontCameraOn = true
         } catch (e: CameraAccessException) {
             Timber.e("OpenCamera - Camera Access Exception")
         } catch (e: IllegalArgumentException) {
@@ -172,7 +179,7 @@ class StreamGLRenderer(view: StreamGLSurfaceView) : GLSurfaceView.Renderer, Surf
         }
     }
 
-    fun closeCamera() {
+    fun stopFrontCameraPreview() {
         try {
             mCameraOpenCloseLock.acquire()
             mCaptureSession?.apply {
@@ -183,6 +190,7 @@ class StreamGLRenderer(view: StreamGLSurfaceView) : GLSurfaceView.Renderer, Surf
                 close()
             }
             mCameraDevice = null
+            isFrontCameraOn = false
         } catch (e: InterruptedException) {
             throw java.lang.RuntimeException("Interrupted while trying to lock camera closing.", e)
         } finally {
@@ -213,8 +221,8 @@ class StreamGLRenderer(view: StreamGLSurfaceView) : GLSurfaceView.Renderer, Surf
     private fun createCameraPreviewSession() {
         try {
             Timber.d("preview size: ${mPreviewSize.width}x${mPreviewSize.height}")
-            mSTexture.setDefaultBufferSize(mPreviewSize.width, mPreviewSize.height)
-            val surface = Surface(mSTexture)
+            mSTextureFront.setDefaultBufferSize(mPreviewSize.width, mPreviewSize.height)
+            val surface = Surface(mSTextureFront)
             mCameraDevice?.let { device ->
                 mPreviewRequestBuilder = device.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW).apply {
                     addTarget(surface)
@@ -281,7 +289,8 @@ class StreamGLRenderer(view: StreamGLSurfaceView) : GLSurfaceView.Renderer, Surf
 
         synchronized(this) {
             if (mUpdateST) {
-                mSTexture.updateTexImage()
+                mSTexturePi.updateTexImage()
+                mSTextureFront.updateTexImage()
                 mUpdateST = false
             }
         }
@@ -296,11 +305,27 @@ class StreamGLRenderer(view: StreamGLSurfaceView) : GLSurfaceView.Renderer, Surf
         GLES30.glEnableVertexAttribArray(ph)
         GLES30.glEnableVertexAttribArray(tch)
 
+        Matrix.setIdentityM(transform, 0)
+        val transformLocation = GLES30.glGetUniformLocation(hProgram, "transform")
+        GLES30.glUniformMatrix4fv(transformLocation, 1, false, transform, 0)
+
         GLES30.glActiveTexture(GLES30.GL_TEXTURE0)
         GLES30.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, hTex[0])
         GLES30.glUniform1i(GLES30.glGetUniformLocation(hProgram, "sTexture"), 0)
-
         GLES30.glDrawArrays(GLES30.GL_TRIANGLE_STRIP, 0, 4)
+
+        if (isFrontCameraOn) {
+            Matrix.setIdentityM(transform, 0)
+            Matrix.translateM(transform, 0, 0.7f, -0.3f, 0.0f)
+            Matrix.scaleM(transform, 0,  0.5f * (9.0f / 16.0f) * (3.0f / 4.0f), 0.5f, 0.5f)
+            Matrix.rotateM(transform, 0, 90.0f, 0.0f, 0.0f, 1.0f)
+            GLES30.glUniformMatrix4fv(transformLocation, 1, false, transform, 0)
+            GLES30.glActiveTexture(GLES30.GL_TEXTURE0)
+            GLES30.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, hTex[1])
+            GLES30.glUniform1i(GLES30.glGetUniformLocation(hProgram, "sTexture"), 0)
+            GLES30.glDrawArrays(GLES30.GL_TRIANGLE_STRIP, 0, 4)
+        }
+
         GLES30.glFlush()
     }
 
@@ -309,8 +334,8 @@ class StreamGLRenderer(view: StreamGLSurfaceView) : GLSurfaceView.Renderer, Surf
     }
 
     private fun initTex() {
-        hTex = IntArray(1)
-        GLES30.glGenTextures(1, hTex, 0)
+        hTex = IntArray(2)
+        GLES30.glGenTextures(2, hTex, 0)
         GLES30.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, hTex[0])
         GLES30.glTexParameteri(
             GLES11Ext.GL_TEXTURE_EXTERNAL_OES,

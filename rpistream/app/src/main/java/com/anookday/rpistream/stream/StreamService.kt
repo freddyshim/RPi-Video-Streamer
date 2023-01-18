@@ -158,7 +158,7 @@ class StreamService() : Service() {
          * Enable video input for streaming.
          */
         fun enableCamera(ctrlBlock: USBMonitor.UsbControlBlock?, config: VideoConfig?): String? {
-            val numSkipFrames = 30
+            val numSkipFrames = 2
             var currentFrame = 0
             var currentExposure = 500
 

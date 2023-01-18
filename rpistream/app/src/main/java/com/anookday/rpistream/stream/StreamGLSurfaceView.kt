@@ -29,12 +29,4 @@ class StreamGLSurfaceView(context: Context?, attrs: AttributeSet) : GLSurfaceVie
         renderer.onPause()
         super.onPause()
     }
-
-    fun openFrontCamera() {
-        renderer.openCamera()
-    }
-
-    fun closeFrontCamera() {
-        renderer.closeCamera()
-    }
 }
