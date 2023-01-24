@@ -24,6 +24,7 @@ import com.pedro.encoder.Frame
 import com.pedro.encoder.audio.AudioEncoder
 import com.pedro.encoder.audio.GetAacData
 import com.pedro.encoder.input.audio.MicrophoneManager
+import com.pedro.encoder.utils.yuv.YUVUtil
 import com.pedro.encoder.video.FormatVideoEncoder
 import com.pedro.encoder.video.GetVideoData
 import com.pedro.encoder.video.VideoEncoder
@@ -35,6 +36,7 @@ import net.ossrs.rtmp.ConnectCheckerRtmp
 import net.ossrs.rtmp.SrsFlvMuxer
 import timber.log.Timber
 import java.nio.ByteBuffer
+import java.nio.IntBuffer
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTimedValue
 
@@ -129,6 +131,11 @@ class StreamService() : Service() {
             piCameraView.init()
         }
 
+        fun stream(buffer: IntBuffer, width: Int, height: Int) {
+            val yuvBuf = YUVUtil.ARGBtoYUV420SemiPlanar(buffer.array(), width, height)
+            videoEncoder.inputYUVData(Frame(yuvBuf, 0, false, ImageFormat.YUV_420_888))
+        }
+
         /**
          * Start camera preview if preview is currently disabled.
          *
@@ -188,7 +195,7 @@ class StreamService() : Service() {
                         }
                         // stream video
                         if (isStreaming) {
-                            videoEncoder.inputYUVData(Frame(byteArray, 0, false, ImageFormat.YUV_420_888))
+                            //videoEncoder.inputYUVData(Frame(byteArray, 0, false, ImageFormat.YUV_420_888))
                         }
                     },
                     UVCCamera.PIXEL_FORMAT_YUV420SP
@@ -340,9 +347,7 @@ class StreamService() : Service() {
             var videoCheck = false
             var audioCheck = false
             if (videoEnabled) {
-                camera?.let {
-                    videoCheck = prepareVideo(videoConfig)
-                }
+                videoCheck = prepareVideo(videoConfig)
             }
             if (audioEnabled) {
                 audioCheck = prepareAudio(audioConfig)
@@ -408,8 +413,10 @@ class StreamService() : Service() {
             if (config == null) return false
 
             return videoEncoder.prepareVideoEncoder(
-                config.width,
-                config.height,
+                //config.width,
+                //config.height,
+                1440,
+                810,
                 config.fps,
                 config.bitrate,
                 config.rotation,
@@ -487,8 +494,10 @@ class StreamService() : Service() {
          */
         fun stopStream() {
             if (isStreaming) {
-                isStreaming = false
+                videoEncoder.stop()
+                audioEncoder.stop()
                 srsFlvMuxer?.stop()
+                isStreaming = false
             }
             //glInterface?.let {
             //    it.removeMediaCodecSurface()

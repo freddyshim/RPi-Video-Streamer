@@ -5,9 +5,6 @@ import android.animation.ObjectAnimator
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.graphics.ImageFormat
-import android.graphics.PixelFormat
-import android.graphics.SurfaceTexture
-import android.opengl.GLSurfaceView
 import android.os.Bundle
 import android.transition.TransitionManager
 import android.view.animation.OvershootInterpolator
@@ -23,12 +20,9 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.anookday.rpistream.*
-import com.anookday.rpistream.chat.ChatService
-import com.anookday.rpistream.chat.ChatStatus
 import com.anookday.rpistream.chat.TwitchChatAdapter
 import com.anookday.rpistream.databinding.FragmentStreamBinding
 import com.anookday.rpistream.repository.database.Message
-import com.anookday.rpistream.repository.database.User
 import com.anookday.rpistream.util.Constants
 import kotlinx.android.synthetic.main.activity_stream.*
 import kotlinx.android.synthetic.main.fab_toggle_off.*

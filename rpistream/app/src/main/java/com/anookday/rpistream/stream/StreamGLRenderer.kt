@@ -4,24 +4,22 @@ import android.content.Context
 import android.graphics.Point
 import android.graphics.SurfaceTexture
 import android.hardware.camera2.*
-import android.opengl.GLES11Ext
-import android.opengl.GLES30
-import android.opengl.GLSurfaceView
-import android.opengl.Matrix
+import android.opengl.*
 import android.os.Handler
 import android.os.HandlerThread
 import android.util.Size
 import android.view.Surface
+import com.pedro.encoder.utils.gl.GlUtil.checkEglError
 import com.serenegiant.usb.UVCCamera
 import timber.log.Timber
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
+import java.nio.IntBuffer
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
-import kotlin.math.sqrt
 
 
 class StreamGLRenderer(view: StreamGLSurfaceView) : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailableListener {
@@ -56,7 +54,7 @@ class StreamGLRenderer(view: StreamGLSurfaceView) : GLSurfaceView.Renderer, Surf
     private var mGLInit = false
     private var mUpdateST = false
 
-    private var mView: StreamGLSurfaceView? = null
+    private var mView: StreamGLSurfaceView
 
     private var mCameraDevice: CameraDevice? = null
     private var mCaptureSession: CameraCaptureSession? = null
@@ -324,6 +322,15 @@ class StreamGLRenderer(view: StreamGLSurfaceView) : GLSurfaceView.Renderer, Surf
             GLES30.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, hTex[1])
             GLES30.glUniform1i(GLES30.glGetUniformLocation(hProgram, "sTexture"), 0)
             GLES30.glDrawArrays(GLES30.GL_TRIANGLE_STRIP, 0, 4)
+        }
+
+        if (StreamService.isStreaming) {
+            val width = mView.width
+            val height = mView.height
+            val buffer = IntBuffer.allocate(width * height * 4)
+            GLES30.glReadPixels(0, 0, width, height, GLES30.GL_RGBA, GLES30.GL_UNSIGNED_BYTE, buffer)
+            buffer.rewind()
+            StreamService.stream(buffer, width, height)
         }
 
         GLES30.glFlush()
