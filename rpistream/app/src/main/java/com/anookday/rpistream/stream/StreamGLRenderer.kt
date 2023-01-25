@@ -327,7 +327,7 @@ class StreamGLRenderer(view: StreamGLSurfaceView) : GLSurfaceView.Renderer, Surf
         if (StreamService.isStreaming) {
             val width = mView.width
             val height = mView.height
-            val buffer = IntBuffer.allocate(width * height * 4)
+            val buffer = ByteBuffer.allocate(width * height * 4)
             GLES30.glReadPixels(0, 0, width, height, GLES30.GL_RGBA, GLES30.GL_UNSIGNED_BYTE, buffer)
             buffer.rewind()
             StreamService.stream(buffer, width, height)

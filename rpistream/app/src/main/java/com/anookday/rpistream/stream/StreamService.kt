@@ -5,13 +5,12 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.ImageFormat
-import android.graphics.SurfaceTexture
 import android.hardware.usb.UsbManager
 import android.media.MediaCodec
 import android.media.MediaFormat
 import android.media.MediaRecorder
-import android.opengl.GLSurfaceView
 import android.os.IBinder
 import android.view.SurfaceHolder
 import androidx.core.app.NotificationCompat
@@ -32,11 +31,11 @@ import com.pedro.rtplibrary.view.GlInterface
 import com.pedro.rtplibrary.view.OpenGlView
 import com.serenegiant.usb.USBMonitor
 import com.serenegiant.usb.UVCCamera
+import kotlinx.coroutines.*
 import net.ossrs.rtmp.ConnectCheckerRtmp
 import net.ossrs.rtmp.SrsFlvMuxer
 import timber.log.Timber
 import java.nio.ByteBuffer
-import java.nio.IntBuffer
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTimedValue
 
@@ -49,6 +48,7 @@ const val STREAM_SERVICE_NAME = "RPi Streamer | Stream Service"
  */
 class StreamService() : Service() {
     companion object {
+        private val scope: CoroutineScope = CoroutineScope(Job() + Dispatchers.Default)
         private var usbManager: UsbManager? = null
         private var camera: UVCCamera? = null
         private var glInterface: GlInterface? = null
@@ -131,9 +131,33 @@ class StreamService() : Service() {
             piCameraView.init()
         }
 
-        fun stream(buffer: IntBuffer, width: Int, height: Int) {
-            val yuvBuf = YUVUtil.ARGBtoYUV420SemiPlanar(buffer.array(), width, height)
-            videoEncoder.inputYUVData(Frame(yuvBuf, 0, false, ImageFormat.YUV_420_888))
+        private fun reverseBuf(buf: ByteBuffer, width: Int, height: Int) {
+            var i = 0
+            val tmp = ByteArray(width * 4)
+            while (i++ < height / 2) {
+                buf[tmp]
+                System.arraycopy(
+                    buf.array(),
+                    buf.limit() - buf.position(),
+                    buf.array(),
+                    buf.position() - width * 4,
+                    width * 4
+                )
+                System.arraycopy(tmp, 0, buf.array(), buf.limit() - buf.position(), width * 4)
+            }
+            buf.rewind()
+        }
+
+        fun stream(buffer: ByteBuffer, width: Int, height: Int) {
+            scope.launch {
+                reverseBuf(buffer, width, height)
+                val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                bitmap.copyPixelsFromBuffer(buffer)
+                val input =  IntArray(bitmap.width * bitmap.height)
+                bitmap.getPixels(input, 0, width, 0, 0, width, height)
+                val yuvBuf = YUVUtil.ARGBtoYUV420SemiPlanar(input, width, height)
+                videoEncoder.inputYUVData(Frame(yuvBuf, 0, false, ImageFormat.NV21))
+            }
         }
 
         /**
@@ -192,10 +216,6 @@ class StreamService() : Service() {
                                 currentFrame = 0
                             }
                             currentFrame++
-                        }
-                        // stream video
-                        if (isStreaming) {
-                            //videoEncoder.inputYUVData(Frame(byteArray, 0, false, ImageFormat.YUV_420_888))
                         }
                     },
                     UVCCamera.PIXEL_FORMAT_YUV420SP
@@ -380,20 +400,6 @@ class StreamService() : Service() {
         private fun startEncoders() {
             if (videoEnabled) {
                 videoEncoder.start()
-                //glInterface?.let { intf ->
-                //    intf.stop()
-                //    intf.setEncoderSize(videoEncoder.width, videoEncoder.height)
-                //    intf.setRotation(0)
-                //    intf.start()
-                //    camera?.let { cam ->
-                //        cam.setPreviewTexture(intf.surfaceTexture)
-                //        cam.startPreview()
-                //        if (videoEncoder.inputSurface != null) {
-                //            intf.addMediaCodecSurface(videoEncoder.inputSurface)
-                //        }
-                //        isPreview = true
-                //    }
-                //}
             }
             if (audioEnabled) {
                 audioEncoder.start()
@@ -458,38 +464,6 @@ class StreamService() : Service() {
         }
 
         /**
-         * Set GlInterface. If one exists, replace the old one with the new GlInterface.
-         */
-        //fun setGlInterface(newGlInterface: GlInterface) {
-        //    if (isPreview || isStreaming) {
-        //        glInterface?.let {
-        //            it.removeMediaCodecSurface()
-        //            it.stop()
-        //        }
-        //        glInterface = newGlInterface
-        //        prepareGlView()
-        //    } else {
-        //        glInterface = newGlInterface
-        //        newGlInterface.init()
-        //    }
-        //}
-
-        /**
-         * Prepare GlInterface.
-         */
-        //private fun prepareGlView() {
-        //    glInterface?.let {
-        //        if (videoEncoder.rotation == 90 || videoEncoder.rotation == 270) {
-        //            it.setEncoderSize(videoEncoder.height, videoEncoder.width)
-        //        } else {
-        //            it.setEncoderSize(videoEncoder.width, videoEncoder.height)
-        //        }
-        //        it.start()
-        //        it.addMediaCodecSurface(videoEncoder.inputSurface)
-        //    }
-        //}
-
-        /**
          * Stops the stream.
          */
         fun stopStream() {
@@ -499,11 +473,6 @@ class StreamService() : Service() {
                 srsFlvMuxer?.stop()
                 isStreaming = false
             }
-            //glInterface?.let {
-            //    it.removeMediaCodecSurface()
-            //    videoEncoder.stop()
-            //    audioEncoder.stop()
-            //}
             streamTimer?.reset()
         }
     }
