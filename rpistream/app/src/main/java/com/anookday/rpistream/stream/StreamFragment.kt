@@ -4,6 +4,7 @@ import android.Manifest
 import android.animation.ObjectAnimator
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
+import android.graphics.ImageFormat
 import android.os.Bundle
 import android.transition.TransitionManager
 import android.view.animation.OvershootInterpolator
@@ -19,12 +20,9 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.anookday.rpistream.*
-import com.anookday.rpistream.chat.ChatService
-import com.anookday.rpistream.chat.ChatStatus
 import com.anookday.rpistream.chat.TwitchChatAdapter
 import com.anookday.rpistream.databinding.FragmentStreamBinding
 import com.anookday.rpistream.repository.database.Message
-import com.anookday.rpistream.repository.database.User
 import com.anookday.rpistream.util.Constants
 import kotlinx.android.synthetic.main.activity_stream.*
 import kotlinx.android.synthetic.main.fab_toggle_off.*
@@ -38,6 +36,7 @@ class StreamFragment : Fragment() {
     private lateinit var binding: FragmentStreamBinding
     private lateinit var chatAdapter: TwitchChatAdapter
     private val viewModel: StreamViewModel by activityViewModels()
+    private lateinit var preview: StreamGLSurfaceView
 
     // fab animation
     private lateinit var fabConstraintOn: ConstraintSet
@@ -57,24 +56,11 @@ class StreamFragment : Fragment() {
             }
         }
 
-    /**
-     * SurfaceView callback object
-     */
-    private var surfaceViewCallback = object : SurfaceHolder.Callback {
-        override fun surfaceCreated(holder: SurfaceHolder) {
-            Timber.v("surfaceViewCallback: Surface created")
-        }
-
-        override fun surfaceChanged(holder: SurfaceHolder?, format: Int, width: Int, height: Int) {
-            Timber.v("surfaceViewCallback: Surface changed")
-            if (width == 0 || height == 0) return
-            if (StreamService.isPreview) {
-                viewModel.startPreview(width, height)
-            }
-        }
-
-        override fun surfaceDestroyed(holder: SurfaceHolder?) {
-            Timber.v("surfaceViewCallback: Surface destroyed")
+    private val cameraRequestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
+        if (isGranted) {
+            // TODO
+        } else {
+            showMessage("cameraRequestPermissionLauncher: Camera permission denied")
         }
     }
 
@@ -82,25 +68,34 @@ class StreamFragment : Fragment() {
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
+    ): View {
         chatAdapter = TwitchChatAdapter(context)
         fabConstraintOn = ConstraintSet().apply { clone(context, R.layout.fab_toggle_on) }
         fabConstraintOff = ConstraintSet().apply { clone(context, R.layout.fab_toggle_off) }
         fabTransition = ChangeBounds().apply { interpolator = OvershootInterpolator(1.0F) }
         isMenuPressed = false
 
-        binding = FragmentStreamBinding.inflate(inflater, container, false).apply {
-            chatMessages.apply {
-                setHasFixedSize(true)
-                layoutManager = LinearLayoutManager(context)
-                adapter = chatAdapter
+        try {
+            binding = FragmentStreamBinding.inflate(inflater, container, false).apply {
+                chatMessages.apply {
+                    setHasFixedSize(true)
+                    layoutManager = LinearLayoutManager(context)
+                    adapter = chatAdapter
+                }
+
+                // init GLSurfaceView
+                preview = cameraPreview
+
+                viewModel.apply {
+                    init(requireContext(), cameraPreview)
+                }
+
             }
-            cameraPreview.holder.addCallback(surfaceViewCallback)
+        } catch (e: Exception) {
+            Timber.e(e)
         }
 
-        viewModel.apply {
-            init(requireContext(), binding.cameraPreview)
-        }
+        cameraRequestPermissionLauncher.launch(Manifest.permission.CAMERA)
 
         return binding.root
     }
@@ -109,6 +104,7 @@ class StreamFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         menu_fab.setOnClickListener(::onMenuFabClick)
+        selfie_fab.setOnClickListener(::onSelfieFabClick)
         ae_toggle_fab.setOnClickListener(::onAutoExposureToggleFabClick)
         video_fab.setOnClickListener(::onVideoFabClick)
         audio_fab.setOnClickListener(::onAudioFabClick)
@@ -120,6 +116,7 @@ class StreamFragment : Fragment() {
             usbStatus.observe(viewLifecycleOwner, ::observeUsbStatus)
             connectStatus.observe(viewLifecycleOwner, ::observeConnectStatus)
             authStatus.observe(viewLifecycleOwner, ::observeAuthStatus)
+            selfieToggleStatus.observe(viewLifecycleOwner, ::observeSelfieStatus)
             aeToggleStatus.observe(viewLifecycleOwner, ::observeAutoExposureToggleStatus)
             videoStatus.observe(viewLifecycleOwner, ::observeVideoStatus)
             audioStatus.observe(viewLifecycleOwner, ::observeAudioStatus)
@@ -136,13 +133,15 @@ class StreamFragment : Fragment() {
             true
         )
         super.onResume()
+        preview.onResume()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        preview.onPause()
     }
 
     override fun onStop() {
-        binding.cameraPreview.apply {
-            removeMediaCodecSurface()
-            stop()
-        }
         super.onStop()
     }
 
@@ -172,6 +171,13 @@ class StreamFragment : Fragment() {
             duration = 300
             start()
         }
+    }
+
+    /**
+     * Click listener for selfie fab.
+     */
+    private fun onSelfieFabClick(view: View) {
+        viewModel.toggleSelfieCam()
     }
 
     /**
@@ -291,6 +297,23 @@ class StreamFragment : Fragment() {
                 RtmpAuthStatus.SUCCESS -> showMessage("Auth success")
                 RtmpAuthStatus.FAIL -> showMessage("Auth error")
             }
+        }
+    }
+
+    /**
+     * Observer for selfie status [LiveData].
+     */
+    private fun observeSelfieStatus(status: Boolean) {
+        if (status) {
+            selfie_fab.backgroundTintList = ColorStateList.valueOf(
+                ContextCompat.getColor(requireContext(), R.color.colorAccent)
+            )
+            selfie_fab_text.text = getText(R.string.selfie_on_text)
+        } else {
+            selfie_fab.backgroundTintList = ColorStateList.valueOf(
+                ContextCompat.getColor(requireContext(), R.color.colorPrimary)
+            )
+            selfie_fab_text.text = getText(R.string.selfie_off_text)
         }
     }
 

@@ -5,12 +5,14 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.ImageFormat
 import android.hardware.usb.UsbManager
 import android.media.MediaCodec
 import android.media.MediaFormat
 import android.media.MediaRecorder
 import android.os.IBinder
+import android.view.SurfaceHolder
 import androidx.core.app.NotificationCompat
 import com.anookday.rpistream.R
 import com.anookday.rpistream.pi.CommandType
@@ -21,6 +23,7 @@ import com.pedro.encoder.Frame
 import com.pedro.encoder.audio.AudioEncoder
 import com.pedro.encoder.audio.GetAacData
 import com.pedro.encoder.input.audio.MicrophoneManager
+import com.pedro.encoder.utils.yuv.YUVUtil
 import com.pedro.encoder.video.FormatVideoEncoder
 import com.pedro.encoder.video.GetVideoData
 import com.pedro.encoder.video.VideoEncoder
@@ -28,6 +31,7 @@ import com.pedro.rtplibrary.view.GlInterface
 import com.pedro.rtplibrary.view.OpenGlView
 import com.serenegiant.usb.USBMonitor
 import com.serenegiant.usb.UVCCamera
+import kotlinx.coroutines.*
 import net.ossrs.rtmp.ConnectCheckerRtmp
 import net.ossrs.rtmp.SrsFlvMuxer
 import timber.log.Timber
@@ -44,21 +48,23 @@ const val STREAM_SERVICE_NAME = "RPi Streamer | Stream Service"
  */
 class StreamService() : Service() {
     companion object {
+        private val scope: CoroutineScope = CoroutineScope(Job() + Dispatchers.Default)
         private var usbManager: UsbManager? = null
         private var camera: UVCCamera? = null
-        private var glInterface: GlInterface? = null
+        private var mainSurfaceView: StreamGLSurfaceView? = null
         private var srsFlvMuxer: SrsFlvMuxer? = null
         private var notificationManager: NotificationManager? = null
         private var streamTimer: StreamTimer? = null
         private var videoFormat: MediaFormat? = null
         private var audioFormat: MediaFormat? = null
         private var piRouter: PiRouter? = null
-        private var previewWidth = 720
-        private var previewHeight = 480
+        var width = 1920
+        var height = 1080
         var videoEnabled = false
         var audioEnabled = false
         var isStreaming = false
         var isPreview = false
+        var isAeEnabled = false
 
         var videoBitrate: Int
             get() = videoEncoder.bitRate
@@ -112,31 +118,54 @@ class StreamService() : Service() {
         private val microphoneManager: MicrophoneManager =
             MicrophoneManager { frame -> audioEncoder.inputPCMData(frame) }
 
-        fun init(openGlView: OpenGlView, connectChecker: ConnectCheckerRtmp) {
-            camera = UVCCamera()
-            glInterface = openGlView
+        fun init(glSurfaceView: StreamGLSurfaceView, connectChecker: ConnectCheckerRtmp) {
+            val newCamera = UVCCamera()
+            camera = newCamera
+            mainSurfaceView = glSurfaceView
             srsFlvMuxer = SrsFlvMuxer(connectChecker)
-            piRouter = PiRouter(openGlView.context)
-            openGlView.init()
+            piRouter = PiRouter(glSurfaceView.context)
+        }
+
+        private fun reverseBuf(buf: ByteBuffer, width: Int, height: Int) {
+            var i = 0
+            val tmp = ByteArray(width * 4)
+            while (i++ < height / 2) {
+                buf[tmp]
+                System.arraycopy(
+                    buf.array(),
+                    buf.limit() - buf.position(),
+                    buf.array(),
+                    buf.position() - width * 4,
+                    width * 4
+                )
+                System.arraycopy(tmp, 0, buf.array(), buf.limit() - buf.position(), width * 4)
+            }
+            buf.rewind()
+        }
+
+        fun stream(buffer: ByteBuffer, width: Int, height: Int) {
+            scope.launch {
+                reverseBuf(buffer, width, height)
+                val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                bitmap.copyPixelsFromBuffer(buffer)
+                val input =  IntArray(bitmap.width * bitmap.height)
+                bitmap.getPixels(input, 0, width, 0, 0, width, height)
+                val yuvBuf = YUVUtil.ARGBtoYUV420SemiPlanar(input, width, height)
+                videoEncoder.inputYUVData(Frame(yuvBuf, 0, false, ImageFormat.NV21))
+            }
         }
 
         /**
          * Start camera preview if preview is currently disabled.
          *
-         * @param width         Width of preview frame in px.
-         * @param height        Height of preview frame in px.
+         * @param streamWidth         Width of stream output frame in px.
+         * @param height        Height of stream output frame in px.
          */
-        fun startPreview(width: Int?, height: Int?) {
-            if (width != null) previewWidth = width
-            if (height != null) previewHeight = height
-            glInterface?.let { intf ->
-                intf.setEncoderSize(previewWidth, previewHeight)
-                intf.setRotation(0)
-                intf.start()
-                camera?.let { cam ->
-                    cam.setPreviewTexture(intf.surfaceTexture)
-                    cam.startPreview()
-                }
+        private fun startPreview(streamWidth: Int, streamHeight: Int) {
+            camera?.let {
+                width = streamWidth
+                height = streamHeight
+                mainSurfaceView?.renderer?.startPiCameraPreview(it, width, height)
                 isPreview = true
                 Timber.v("RPISTREAM preview enabled")
             }
@@ -145,18 +174,17 @@ class StreamService() : Service() {
         /**
          * Stop camera preview if preview is currently enabled.
          */
-        fun stopPreview() {
-            Timber.v("RPISTREAM preview disabled")
-            glInterface?.stop()
-            camera?.stopPreview()
+        private fun stopPreview() {
+            mainSurfaceView?.renderer?.stopPiCameraPreview()
             isPreview = false
+            Timber.v("RPISTREAM preview disabled")
         }
 
         /**
          * Enable video input for streaming.
          */
         fun enableCamera(ctrlBlock: USBMonitor.UsbControlBlock?, config: VideoConfig?): String? {
-            val numSkipFrames = 5
+            val numSkipFrames = 2
             var currentFrame = 0
             var currentExposure = 500
 
@@ -171,20 +199,18 @@ class StreamService() : Service() {
                 }
                 it.setFrameCallback(
                     { frame ->
-                        frame.rewind()
-                        val byteArray = ByteArray(frame.remaining())
-                        frame.get(byteArray)
                         // process image
-                        if (currentFrame >= numSkipFrames) {
-                            config?.let {
-                                currentExposure = processImage(byteArray, it, currentExposure)
+                        if (isAeEnabled) {
+                            frame.rewind()
+                            val byteArray = ByteArray(frame.remaining())
+                            frame.get(byteArray)
+                            if (currentFrame >= numSkipFrames) {
+                                config?.let {
+                                    currentExposure = processImage(byteArray, config, currentExposure)
+                                }
+                                currentFrame = 0
                             }
-                            currentFrame = 0
-                        }
-                        currentFrame++
-                        // stream video
-                        if (isStreaming) {
-                            videoEncoder.inputYUVData(Frame(byteArray, 0, false, ImageFormat.YUV_420_888))
+                            currentFrame++
                         }
                     },
                     UVCCamera.PIXEL_FORMAT_YUV420SP
@@ -200,7 +226,6 @@ class StreamService() : Service() {
             val maxLum = 194
             val minLum = 61
             val targetLum = minLum + (maxLum - minLum) / 2
-            val targetExposureAbsolute = 500
             val exposureAbsoluteMinimum = 15
             val exposureAbsoluteLimit = 1000
             val alpha = 0.25f
@@ -337,9 +362,7 @@ class StreamService() : Service() {
             var videoCheck = false
             var audioCheck = false
             if (videoEnabled) {
-                camera?.let {
-                    videoCheck = prepareVideo(videoConfig)
-                }
+                videoCheck = prepareVideo(videoConfig)
             }
             if (audioEnabled) {
                 audioCheck = prepareAudio(audioConfig)
@@ -372,20 +395,6 @@ class StreamService() : Service() {
         private fun startEncoders() {
             if (videoEnabled) {
                 videoEncoder.start()
-                glInterface?.let { intf ->
-                    intf.stop()
-                    intf.setEncoderSize(videoEncoder.width, videoEncoder.height)
-                    intf.setRotation(0)
-                    intf.start()
-                    camera?.let { cam ->
-                        cam.setPreviewTexture(intf.surfaceTexture)
-                        cam.startPreview()
-                        if (videoEncoder.inputSurface != null) {
-                            intf.addMediaCodecSurface(videoEncoder.inputSurface)
-                        }
-                        isPreview = true
-                    }
-                }
             }
             if (audioEnabled) {
                 audioEncoder.start()
@@ -448,59 +457,16 @@ class StreamService() : Service() {
         }
 
         /**
-         * Set GlInterface. If one exists, replace the old one with the new GlInterface.
-         */
-        fun setGlInterface(newGlInterface: GlInterface) {
-            if (isPreview || isStreaming) {
-                glInterface?.let {
-                    it.removeMediaCodecSurface()
-                    it.stop()
-                }
-                glInterface = newGlInterface
-                prepareGlView()
-            } else {
-                glInterface = newGlInterface
-                newGlInterface.init()
-            }
-        }
-
-        /**
-         * Prepare GlInterface.
-         */
-        private fun prepareGlView() {
-            glInterface?.let {
-                if (videoEncoder.rotation == 90 || videoEncoder.rotation == 270) {
-                    it.setEncoderSize(videoEncoder.height, videoEncoder.width)
-                } else {
-                    it.setEncoderSize(videoEncoder.width, videoEncoder.height)
-                }
-                it.start()
-                it.addMediaCodecSurface(videoEncoder.inputSurface)
-            }
-        }
-
-        /**
          * Stops the stream.
          */
         fun stopStream() {
             if (isStreaming) {
-                isStreaming = false
-                srsFlvMuxer?.stop()
-            }
-            glInterface?.let {
-                it.removeMediaCodecSurface()
                 videoEncoder.stop()
                 audioEncoder.stop()
+                srsFlvMuxer?.stop()
+                isStreaming = false
             }
             streamTimer?.reset()
-        }
-
-        /**
-         * Calculates exposure bias based on brightness of the current image and sends that value as
-         * a command to the connected device.
-         */
-        fun handleExposure() {
-
         }
     }
 

@@ -32,7 +32,7 @@
                 app:layout_constraintStart_toStartOf="@id/main_container"
                 app:layout_constraintTop_toTopOf="parent">
 
-                <com.pedro.rtplibrary.view.OpenGlView
+                <com.anookday.rpistream.stream.StreamGLSurfaceView
                     android:id="@+id/camera_preview"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"

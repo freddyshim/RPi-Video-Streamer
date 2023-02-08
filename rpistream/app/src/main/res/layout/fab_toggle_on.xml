@@ -8,6 +8,21 @@
     android:layout_height="wrap_content">
 
         <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/selfie_fab"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="16dp"
+            app:backgroundTint="@color/colorPrimary"
+            app:borderWidth="0dp"
+            app:fabSize="mini"
+            app:layout_constraintBottom_toTopOf="@+id/ae_toggle_fab"
+            app:layout_constraintEnd_toEndOf="@+id/menu_fab"
+            app:layout_constraintStart_toStartOf="@+id/menu_fab"
+            app:srcCompat="@drawable/ic_baseline_camera_front_24"
+            app:tint="@color/colorIconText"
+            android:contentDescription="@string/ae_toggle_fab_description" />
+
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/ae_toggle_fab"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -16,7 +31,7 @@
             app:borderWidth="0dp"
             app:fabSize="mini"
             app:layout_constraintBottom_toTopOf="@+id/video_fab"
-            app:layout_constraintEnd_toEndOf="@+id/audio_fab"
+            app:layout_constraintEnd_toEndOf="@+id/menu_fab"
             app:layout_constraintStart_toStartOf="@+id/menu_fab"
             app:srcCompat="@drawable/ic_baseline_exposure_24"
             app:tint="@color/colorIconText"
@@ -80,6 +95,23 @@
             app:srcCompat="@drawable/ic_baseline_menu_24"
             app:tint="@color/colorIconText"
             android:contentDescription="@string/menu_fab_description" />
+
+        <TextView
+            android:id="@+id/selfie_fab_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/fab_text_bg"
+            android:fontFamily="sans-serif"
+            android:paddingStart="8dp"
+            android:paddingTop="4dp"
+            android:paddingEnd="8dp"
+            android:paddingBottom="4dp"
+            android:textColor="@color/colorTextPrimary"
+            android:text="@string/selfie_off_text"
+            app:layout_constraintBottom_toBottomOf="@+id/selfie_fab"
+            app:layout_constraintEnd_toStartOf="@+id/selfie_fab"
+            app:layout_constraintTop_toTopOf="@+id/selfie_fab" />
 
         <TextView
             android:id="@+id/ae_toggle_fab_text"

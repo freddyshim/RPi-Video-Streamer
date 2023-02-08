@@ -7,6 +7,7 @@ import android.hardware.usb.UsbConstants
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbInterface
 import android.hardware.usb.UsbManager
+import android.opengl.GLSurfaceView
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
@@ -59,17 +60,14 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
     val currentFragment: LiveData<CurrentFragmentName>
         get() = _currentFragment
 
-    // rpi command router
-    private val piRouter = PiRouter(app.applicationContext)
-
     // twitch oauth manager
     private val twitchManager = TwitchManager(app.applicationContext, database)
 
-    // twitch chat variables
-    private var chatWebSocket: WebSocket? = null
-
     // usb manager
     var usbManager = app.getSystemService(Context.USB_SERVICE) as UsbManager
+
+    // GLSurfaceView renderer
+    private var viewRenderer: StreamGLRenderer? = null
 
     // USB monitor object used to control connected USB devices
     private var usbMonitor: USBMonitor? = null
@@ -89,7 +87,12 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
     val authStatus: LiveData<RtmpAuthStatus>
         get() = _authStatus
 
-    // video connection status
+    // selfie cam toggle status
+    private val _selfieToggleStatus = MutableLiveData<Boolean>(false)
+    val selfieToggleStatus: LiveData<Boolean>
+        get() = _selfieToggleStatus
+
+    // auto exposure toggle status
     private val _aeToggleStatus = MutableLiveData<Boolean>(false)
     val aeToggleStatus: LiveData<Boolean>
         get() = _aeToggleStatus
@@ -115,11 +118,12 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
      * Initialize required LiveData variables.
      *
      * @param context Activity context
-     * @param cameraView OpenGL surface view that displays the camera
+     * @param openGlView OpenGL surface view that displays the camera
      */
-    fun init(context: Context, cameraView: OpenGlView) {
+    fun init(context: Context, openGlView: StreamGLSurfaceView) {
         usbMonitor = USBMonitor(context, onDeviceConnectListener)
-        StreamService.init(cameraView, connectCheckerRtmp)
+        viewRenderer = openGlView.renderer
+        StreamService.init(openGlView, connectCheckerRtmp)
         registerUsbMonitor()
         connectToChat()
     }
@@ -150,24 +154,6 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
     }
 
     /**
-     * Start camera preview if there is no preview.
-     */
-    fun startPreview(width: Int?, height: Int?) {
-        viewModelScope.launch {
-            StreamService.startPreview(width, height)
-        }
-    }
-
-    /**
-     * Stop camera preview if there is a preview.
-     */
-    fun stopPreview() {
-        viewModelScope.launch {
-            StreamService.stopPreview()
-        }
-    }
-
-    /**
      * Stop the current stream and preview. Destroy camera instance if initialized.
      */
     fun disableCamera() {
@@ -180,13 +166,25 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
     /**
      * Send a command to the connected video device to toggle auto exposure.
      */
+    fun toggleSelfieCam() {
+        _selfieToggleStatus.value?.let {
+            val newToggleStatus = !it
+            _selfieToggleStatus.value = newToggleStatus
+
+            viewRenderer?.let { renderer ->
+                if (newToggleStatus) renderer.startFrontCameraPreview() else renderer.stopFrontCameraPreview()
+            }
+        }
+    }
+
+    /**
+     * Send a command to the connected video device to toggle auto exposure.
+     */
     fun toggleAutoExposure() {
-        Timber.d("made it here")
         _aeToggleStatus.value?.let {
             val newToggleStatus = !it
-            val aeValue = if (newToggleStatus) "0" else "1"
-            piRouter.routeCommand(CommandType.AUTO_EXPOSURE, aeValue)
             _aeToggleStatus.value = newToggleStatus
+            StreamService.isAeEnabled = !StreamService.isAeEnabled
         }
     }
 
