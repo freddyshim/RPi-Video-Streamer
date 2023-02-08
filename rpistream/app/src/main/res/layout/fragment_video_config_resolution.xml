@@ -8,16 +8,6 @@
         style="@style/settingsRadioGroup">
 
         <RadioButton
-            android:id="@+id/resolution_360"
-            style="@style/settingsRadioButton"
-            android:text="@string/video_config_resolution_360" />
-
-        <RadioButton
-            android:id="@+id/resolution_480"
-            style="@style/settingsRadioButton"
-            android:text="@string/video_config_resolution_480" />
-
-        <RadioButton
             android:id="@+id/resolution_720"
             style="@style/settingsRadioButton"
             android:text="@string/video_config_resolution_720" />

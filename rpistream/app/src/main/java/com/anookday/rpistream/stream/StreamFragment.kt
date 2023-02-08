@@ -64,32 +64,11 @@ class StreamFragment : Fragment() {
         }
     }
 
-    /**
-     * SurfaceView callback object
-     */
-    private var surfaceViewCallback = object : SurfaceHolder.Callback {
-        override fun surfaceCreated(holder: SurfaceHolder) {
-            Timber.v("surfaceViewCallback: Surface created")
-        }
-
-        override fun surfaceChanged(holder: SurfaceHolder?, format: Int, width: Int, height: Int) {
-            Timber.v("surfaceViewCallback: Surface changed")
-            if (width == 0 || height == 0) return
-            if (StreamService.isPreview) {
-                viewModel.startPreview(width, height)
-            }
-        }
-
-        override fun surfaceDestroyed(holder: SurfaceHolder?) {
-            Timber.v("surfaceViewCallback: Surface destroyed")
-        }
-    }
-
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
+    ): View {
         chatAdapter = TwitchChatAdapter(context)
         fabConstraintOn = ConstraintSet().apply { clone(context, R.layout.fab_toggle_on) }
         fabConstraintOff = ConstraintSet().apply { clone(context, R.layout.fab_toggle_off) }
@@ -104,18 +83,11 @@ class StreamFragment : Fragment() {
                     adapter = chatAdapter
                 }
 
-                cameraPreviewHidden.apply {
-                    holder.apply {
-                        setFormat(ImageFormat.YUV_420_888)
-                        addCallback(surfaceViewCallback)
-                    }
-                }
-
                 // init GLSurfaceView
                 preview = cameraPreview
 
                 viewModel.apply {
-                    init(requireContext(), cameraPreviewHidden, cameraPreview)
+                    init(requireContext(), cameraPreview)
                 }
 
             }
@@ -170,10 +142,6 @@ class StreamFragment : Fragment() {
     }
 
     override fun onStop() {
-        //binding.cameraPreview.apply {
-            //removeMediaCodecSurface()
-            //stop()
-        //}
         super.onStop()
     }
 

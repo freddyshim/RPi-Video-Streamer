@@ -47,8 +47,6 @@
     <string name="video_config_title">Video Settings</string>
     <string name="video_config_resolution_title">Video Resolution</string>
     <string name="video_config_resolution_subtitle">%1$d x %2$d</string>
-    <string name="video_config_resolution_360">360p</string>
-    <string name="video_config_resolution_480">480p</string>
     <string name="video_config_resolution_720">720p</string>
     <string name="video_config_resolution_1080">1080p</string>
     <string name="video_config_fps_title">Frames per Second</string>

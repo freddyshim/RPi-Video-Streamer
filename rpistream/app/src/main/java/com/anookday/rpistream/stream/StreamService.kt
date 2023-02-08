@@ -51,8 +51,6 @@ class StreamService() : Service() {
         private val scope: CoroutineScope = CoroutineScope(Job() + Dispatchers.Default)
         private var usbManager: UsbManager? = null
         private var camera: UVCCamera? = null
-        private var glInterface: GlInterface? = null
-        private var surfaceHolder: SurfaceHolder? = null
         private var mainSurfaceView: StreamGLSurfaceView? = null
         private var srsFlvMuxer: SrsFlvMuxer? = null
         private var notificationManager: NotificationManager? = null
@@ -60,8 +58,8 @@ class StreamService() : Service() {
         private var videoFormat: MediaFormat? = null
         private var audioFormat: MediaFormat? = null
         private var piRouter: PiRouter? = null
-        private var previewWidth = 720
-        private var previewHeight = 480
+        var width = 1920
+        var height = 1080
         var videoEnabled = false
         var audioEnabled = false
         var isStreaming = false
@@ -120,15 +118,12 @@ class StreamService() : Service() {
         private val microphoneManager: MicrophoneManager =
             MicrophoneManager { frame -> audioEncoder.inputPCMData(frame) }
 
-        fun init(piCameraView: OpenGlView, glSurfaceView: StreamGLSurfaceView, connectChecker: ConnectCheckerRtmp) {
+        fun init(glSurfaceView: StreamGLSurfaceView, connectChecker: ConnectCheckerRtmp) {
             val newCamera = UVCCamera()
             camera = newCamera
-            glInterface = piCameraView
-            surfaceHolder = piCameraView.holder
             mainSurfaceView = glSurfaceView
             srsFlvMuxer = SrsFlvMuxer(connectChecker)
-            piRouter = PiRouter(piCameraView.context)
-            piCameraView.init()
+            piRouter = PiRouter(glSurfaceView.context)
         }
 
         private fun reverseBuf(buf: ByteBuffer, width: Int, height: Int) {
@@ -163,23 +158,23 @@ class StreamService() : Service() {
         /**
          * Start camera preview if preview is currently disabled.
          *
-         * @param width         Width of preview frame in px.
-         * @param height        Height of preview frame in px.
+         * @param streamWidth         Width of stream output frame in px.
+         * @param height        Height of stream output frame in px.
          */
-        fun startPreview(width: Int?, height: Int?) {
-            if (width != null) previewWidth = width
-            if (height != null) previewHeight = height
+        private fun startPreview(streamWidth: Int, streamHeight: Int) {
             camera?.let {
-                mainSurfaceView?.renderer?.startPiCameraPreview(it, previewWidth, previewHeight)
+                width = streamWidth
+                height = streamHeight
+                mainSurfaceView?.renderer?.startPiCameraPreview(it, width, height)
+                isPreview = true
+                Timber.v("RPISTREAM preview enabled")
             }
-            isPreview = true
-            Timber.v("RPISTREAM preview enabled")
         }
 
         /**
          * Stop camera preview if preview is currently enabled.
          */
-        fun stopPreview() {
+        private fun stopPreview() {
             mainSurfaceView?.renderer?.stopPiCameraPreview()
             isPreview = false
             Timber.v("RPISTREAM preview disabled")
@@ -204,14 +199,14 @@ class StreamService() : Service() {
                 }
                 it.setFrameCallback(
                     { frame ->
-                        frame.rewind()
-                        val byteArray = ByteArray(frame.remaining())
-                        frame.get(byteArray)
                         // process image
                         if (isAeEnabled) {
+                            frame.rewind()
+                            val byteArray = ByteArray(frame.remaining())
+                            frame.get(byteArray)
                             if (currentFrame >= numSkipFrames) {
                                 config?.let {
-                                    currentExposure = processImage(byteArray, it, currentExposure)
+                                    currentExposure = processImage(byteArray, config, currentExposure)
                                 }
                                 currentFrame = 0
                             }
@@ -419,10 +414,8 @@ class StreamService() : Service() {
             if (config == null) return false
 
             return videoEncoder.prepareVideoEncoder(
-                //config.width,
-                //config.height,
-                1440,
-                810,
+                config.width,
+                config.height,
                 config.fps,
                 config.bitrate,
                 config.rotation,

@@ -47,16 +47,12 @@ class VideoConfigResolutionFragment : Fragment() {
         user?.settings?.videoConfig?.let { config ->
             binding.apply {
                 when (config.height) {
-                    360 -> resolutionRadioGroup.check(R.id.resolution_360)
-                    480 -> resolutionRadioGroup.check(R.id.resolution_480)
                     720 -> resolutionRadioGroup.check(R.id.resolution_720)
                     1080 -> resolutionRadioGroup.check(R.id.resolution_1080)
                 }
 
                 resolutionRadioGroup.setOnCheckedChangeListener { _, checkedId ->
                     when (checkedId) {
-                        R.id.resolution_360 -> viewModel.updateVideoResolution(480, 360)
-                        R.id.resolution_480 -> viewModel.updateVideoResolution(640, 480)
                         R.id.resolution_720 -> viewModel.updateVideoResolution(1280, 720)
                         R.id.resolution_1080 -> viewModel.updateVideoResolution(1920, 1080)
                     }

@@ -60,14 +60,8 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
     val currentFragment: LiveData<CurrentFragmentName>
         get() = _currentFragment
 
-    // rpi command router
-    private val piRouter = PiRouter(app.applicationContext)
-
     // twitch oauth manager
     private val twitchManager = TwitchManager(app.applicationContext, database)
-
-    // twitch chat variables
-    private var chatWebSocket: WebSocket? = null
 
     // usb manager
     var usbManager = app.getSystemService(Context.USB_SERVICE) as UsbManager
@@ -124,12 +118,12 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
      * Initialize required LiveData variables.
      *
      * @param context Activity context
-     * @param cameraView OpenGL surface view that displays the camera
+     * @param openGlView OpenGL surface view that displays the camera
      */
-    fun init(context: Context, piCameraView: OpenGlView, cameraView: StreamGLSurfaceView) {
+    fun init(context: Context, openGlView: StreamGLSurfaceView) {
         usbMonitor = USBMonitor(context, onDeviceConnectListener)
-        viewRenderer = cameraView.renderer
-        StreamService.init(piCameraView, cameraView, connectCheckerRtmp)
+        viewRenderer = openGlView.renderer
+        StreamService.init(openGlView, connectCheckerRtmp)
         registerUsbMonitor()
         connectToChat()
     }
@@ -156,24 +150,6 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
     fun unregisterUsbMonitor() {
         viewModelScope.launch {
             usbMonitor?.unregister()
-        }
-    }
-
-    /**
-     * Start camera preview if there is no preview.
-     */
-    fun startPreview(width: Int?, height: Int?) {
-        viewModelScope.launch {
-            StreamService.startPreview(width, height)
-        }
-    }
-
-    /**
-     * Stop camera preview if there is a preview.
-     */
-    fun stopPreview() {
-        viewModelScope.launch {
-            StreamService.stopPreview()
         }
     }
 
