@@ -313,7 +313,6 @@ class StreamGLRenderer(view: StreamGLSurfaceView) : GLSurfaceView.Renderer, Surf
         Matrix.setIdentityM(transform, 0)
         val transformLocation = GLES30.glGetUniformLocation(hProgram, "transform")
         GLES30.glUniformMatrix4fv(transformLocation, 1, false, transform, 0)
-
         GLES30.glActiveTexture(GLES30.GL_TEXTURE0)
         GLES30.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, hTex[0])
         GLES30.glUniform1i(GLES30.glGetUniformLocation(hProgram, "sTexture"), 0)

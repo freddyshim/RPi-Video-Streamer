@@ -106,7 +106,7 @@ class StreamService() : Service() {
             }
 
             override fun getAacData(aacBuffer: ByteBuffer, info: MediaCodec.BufferInfo) {
-                if (isStreaming) {
+                if (isStreaming && audioEnabled) {
                     srsFlvMuxer?.sendAudio(aacBuffer, info)
                 }
             }
@@ -359,15 +359,9 @@ class StreamService() : Service() {
          */
         fun prepareStream(videoConfig: VideoConfig?, audioConfig: AudioConfig?): Boolean {
             if (isStreaming) return false
-            var videoCheck = false
-            var audioCheck = false
-            if (videoEnabled) {
-                videoCheck = prepareVideo(videoConfig)
-            }
-            if (audioEnabled) {
-                audioCheck = prepareAudio(audioConfig)
-            }
-            return videoCheck || audioCheck
+            val videoCheck = prepareVideo(videoConfig)
+            val audioCheck = prepareAudio(audioConfig)
+            return videoCheck && audioCheck
         }
 
         /**
@@ -393,13 +387,9 @@ class StreamService() : Service() {
          * Prepare encoders before streaming.
          */
         private fun startEncoders() {
-            if (videoEnabled) {
-                videoEncoder.start()
-            }
-            if (audioEnabled) {
-                audioEncoder.start()
-                microphoneManager.start()
-            }
+            videoEncoder.start()
+            audioEncoder.start()
+            microphoneManager.start()
         }
 
         /**

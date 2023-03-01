@@ -192,16 +192,14 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
      * Connect to UVCCamera if video is disabled. Otherwise, disable video.
      */
     fun toggleVideo() {
-        if (!StreamService.isStreaming) {
-            if (videoStatus.value == null) {
-                val deviceList = usbManager.deviceList
-                if (deviceList.isNotEmpty()) {
-                    val device: UsbDevice = deviceList.values.elementAt(0)
-                    usbMonitor?.requestPermission(device)
-                }
-            } else {
-                disableCamera()
+        if (videoStatus.value == null) {
+            val deviceList = usbManager.deviceList
+            if (deviceList.isNotEmpty()) {
+                val device: UsbDevice = deviceList.values.elementAt(0)
+                usbMonitor?.requestPermission(device)
             }
+        } else {
+            disableCamera()
         }
     }
 
@@ -209,14 +207,12 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
      * Enable or disable audio recording.
      */
     fun toggleAudio() {
-        if (!StreamService.isStreaming) {
-            if (_audioStatus.value == null) {
-                _audioStatus.value = app.getString(R.string.audio_on_text)
-                StreamService.enableAudio()
-            } else {
-                _audioStatus.value = null
-                StreamService.disableAudio()
-            }
+        if (_audioStatus.value == null) {
+            _audioStatus.value = app.getString(R.string.audio_on_text)
+            StreamService.enableAudio()
+        } else {
+            _audioStatus.value = null
+            StreamService.disableAudio()
         }
     }
 
