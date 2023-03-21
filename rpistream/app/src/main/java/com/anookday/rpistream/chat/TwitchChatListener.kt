@@ -8,6 +8,8 @@ import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import timber.log.Timber
 import java.util.*
+import java.util.regex.Matcher
+import java.util.regex.Pattern
 
 const val NORMAL_CLOSURE_STATUS = 1000
 
@@ -70,11 +72,21 @@ class TwitchChatListener(
      */
     fun parseMessage(text: String): Message {
         val username = "^.*?display-name=([^;]*)".toRegex().find(text)?.groupValues?.get(1)
-        val color = "^.*?color=([^;]*)".toRegex().find(text)?.groupValues?.get(1) ?: "#FFFFFF"
+        var color = "^.*?color=([^;]*)".toRegex().find(text)?.groupValues?.get(1)
+        if (color == null || !isHexadecimal(color)) {
+            color = "#000000"
+        }
         val message = "(?<=#$name\\s:).*".toRegex().find(text)?.value
         if (username != null && message != null) {
             return Message(MessageType.USER, message, username, color)
         }
         return Message(MessageType.USER, "Error parsing chat message.", "Error")
+    }
+
+    private val mHexPattern: Pattern = Pattern.compile("^#[0-9A-F]{6}\$")
+
+    private fun isHexadecimal(input: String): Boolean {
+        val matcher: Matcher = mHexPattern.matcher(input)
+        return matcher.matches()
     }
 }
