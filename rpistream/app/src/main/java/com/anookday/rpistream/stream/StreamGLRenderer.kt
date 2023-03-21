@@ -1,7 +1,6 @@
 package com.anookday.rpistream.stream
 
 import android.content.Context
-import android.graphics.Point
 import android.graphics.SurfaceTexture
 import android.hardware.camera2.*
 import android.opengl.*
@@ -9,7 +8,6 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.util.Size
 import android.view.Surface
-import com.pedro.encoder.utils.gl.GlUtil.checkEglError
 import com.serenegiant.usb.UVCCamera
 import timber.log.Timber
 import java.nio.ByteBuffer
@@ -22,7 +20,7 @@ import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
 
-class StreamGLRenderer(view: StreamGLSurfaceView) : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailableListener {
+class StreamGLRenderer(context: Context) : OpenGLContext.Renderer, SurfaceTexture.OnFrameAvailableListener {
     private val vss_default = """
             attribute vec2 vPosition;
             attribute vec2 vTexCoord;
@@ -56,8 +54,6 @@ class StreamGLRenderer(view: StreamGLSurfaceView) : GLSurfaceView.Renderer, Surf
     private var mGLInit = false
     private var mUpdateST = false
 
-    private var mView: StreamGLSurfaceView
-
     private var mCameraDevice: CameraDevice? = null
     private var mCaptureSession: CameraCaptureSession? = null
     private var mPreviewRequestBuilder: CaptureRequest.Builder? = null
@@ -74,8 +70,7 @@ class StreamGLRenderer(view: StreamGLSurfaceView) : GLSurfaceView.Renderer, Surf
     private var isFrontCameraOn = false
 
     init {
-        mView = view
-        setCameraId()
+        setCameraId(context)
         val vtmp = floatArrayOf(1.0f, -1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f)
         val ttmp = floatArrayOf(1.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f)
         pVertex = ByteBuffer.allocateDirect(8 * 4).order(ByteOrder.nativeOrder()).asFloatBuffer()
@@ -125,8 +120,8 @@ class StreamGLRenderer(view: StreamGLSurfaceView) : GLSurfaceView.Renderer, Surf
         mPiCamera?.stopPreview()
     }
 
-    private fun setCameraId() {
-        val manager = mView.context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
+    private fun setCameraId(context: Context) {
+        val manager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
         try {
             for (cameraID in manager.cameraIdList) {
                 val characteristics = manager.getCameraCharacteristics(cameraID)
@@ -144,8 +139,8 @@ class StreamGLRenderer(view: StreamGLSurfaceView) : GLSurfaceView.Renderer, Surf
         }
     }
 
-    fun startFrontCameraPreview() {
-        val manager = mView.context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
+    fun startFrontCameraPreview(context: Context) {
+        val manager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
         try {
             if (!mCameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
                 throw RuntimeException("Time out waiting to lock camera opening.")
@@ -302,9 +297,8 @@ class StreamGLRenderer(view: StreamGLSurfaceView) : GLSurfaceView.Renderer, Surf
             buffer.rewind()
             StreamService.stream(buffer, mStreamSize.width, mStreamSize.height)
         }
-        GLES30.glViewport(0, 0, mView.width, mView.height)
-        GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
-        draw()
+        //GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
+        //draw()
 
         GLES30.glFlush()
     }
@@ -401,6 +395,6 @@ class StreamGLRenderer(view: StreamGLSurfaceView) : GLSurfaceView.Renderer, Surf
 
     override fun onFrameAvailable(surfaceTexture: SurfaceTexture?) {
         mUpdateST = true
-        mView.requestRender()
+        //mView.requestRender()
     }
 }

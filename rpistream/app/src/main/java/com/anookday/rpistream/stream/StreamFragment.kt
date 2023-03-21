@@ -36,7 +36,7 @@ class StreamFragment : Fragment() {
     private lateinit var binding: FragmentStreamBinding
     private lateinit var chatAdapter: TwitchChatAdapter
     private val viewModel: StreamViewModel by activityViewModels()
-    private lateinit var preview: StreamGLSurfaceView
+    private lateinit var preview: SurfaceView
 
     // fab animation
     private lateinit var fabConstraintOn: ConstraintSet
@@ -133,12 +133,12 @@ class StreamFragment : Fragment() {
             true
         )
         super.onResume()
-        preview.onResume()
+        //preview.onResume()
     }
 
     override fun onPause() {
         super.onPause()
-        preview.onPause()
+        //preview.onPause()
     }
 
     override fun onStop() {

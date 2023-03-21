@@ -13,6 +13,7 @@ import android.media.MediaFormat
 import android.media.MediaRecorder
 import android.os.IBinder
 import android.view.SurfaceHolder
+import android.view.SurfaceView
 import androidx.core.app.NotificationCompat
 import com.anookday.rpistream.R
 import com.anookday.rpistream.pi.CommandType
@@ -51,13 +52,14 @@ class StreamService() : Service() {
         private val scope: CoroutineScope = CoroutineScope(Job() + Dispatchers.Default)
         private var usbManager: UsbManager? = null
         private var camera: UVCCamera? = null
-        private var mainSurfaceView: StreamGLSurfaceView? = null
         private var srsFlvMuxer: SrsFlvMuxer? = null
         private var notificationManager: NotificationManager? = null
         private var streamTimer: StreamTimer? = null
         private var videoFormat: MediaFormat? = null
         private var audioFormat: MediaFormat? = null
         private var piRouter: PiRouter? = null
+        private var openGLContext: OpenGLContext? = null
+        private var renderer: StreamGLRenderer? = null
         var width = 1920
         var height = 1080
         var videoEnabled = false
@@ -118,12 +120,16 @@ class StreamService() : Service() {
         private val microphoneManager: MicrophoneManager =
             MicrophoneManager { frame -> audioEncoder.inputPCMData(frame) }
 
-        fun init(glSurfaceView: StreamGLSurfaceView, connectChecker: ConnectCheckerRtmp) {
+        fun init(context: Context, connectChecker: ConnectCheckerRtmp) {
+            val newOpenGLContext = OpenGLContext()
+            val newRenderer = StreamGLRenderer(context)
+            newOpenGLContext.setRenderer(newRenderer)
+            newOpenGLContext.renderMode = OpenGLContext.RENDERMODE_WHEN_DIRTY
+            openGLContext = newOpenGLContext
             val newCamera = UVCCamera()
             camera = newCamera
-            mainSurfaceView = glSurfaceView
             srsFlvMuxer = SrsFlvMuxer(connectChecker)
-            piRouter = PiRouter(glSurfaceView.context)
+            piRouter = PiRouter(context)
         }
 
         private fun reverseBuf(buf: ByteBuffer, width: Int, height: Int) {
@@ -165,7 +171,7 @@ class StreamService() : Service() {
             camera?.let {
                 width = streamWidth
                 height = streamHeight
-                mainSurfaceView?.renderer?.startPiCameraPreview(it, width, height)
+                renderer?.startPiCameraPreview(it, width, height)
                 isPreview = true
                 Timber.v("RPISTREAM preview enabled")
             }
@@ -175,9 +181,26 @@ class StreamService() : Service() {
          * Stop camera preview if preview is currently enabled.
          */
         private fun stopPreview() {
-            mainSurfaceView?.renderer?.stopPiCameraPreview()
+            renderer?.stopPiCameraPreview()
             isPreview = false
             Timber.v("RPISTREAM preview disabled")
+        }
+
+        /**
+         * Start camera preview if preview is currently disabled.
+         *
+         * @param streamWidth         Width of stream output frame in px.
+         * @param height        Height of stream output frame in px.
+         */
+        fun startFrontPreview(context: Context) {
+            renderer?.startFrontCameraPreview(context)
+        }
+
+        /**
+         * Stop camera preview if preview is currently enabled.
+         */
+        fun stopFrontPreview() {
+            renderer?.stopFrontCameraPreview()
         }
 
         /**
