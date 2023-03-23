@@ -1259,8 +1259,8 @@ public class OpenGLContext implements SurfaceHolder.Callback2 {
     static class GLThread extends Thread {
         GLThread(WeakReference<OpenGLContext> glSurfaceViewWeakRef) {
             super();
-            mWidth = 0;
-            mHeight = 0;
+            mWidth = 1920;
+            mHeight = 1080;
             mRequestRender = true;
             mRenderMode = RENDERMODE_CONTINUOUSLY;
             mWantRenderNotification = false;
@@ -1833,7 +1833,7 @@ public class OpenGLContext implements SurfaceHolder.Callback2 {
         private boolean mExited;
         private boolean mRequestPaused;
         private boolean mPaused;
-        private boolean mHasSurface;
+        private boolean mHasSurface = true;
         private boolean mSurfaceIsBad;
         private boolean mWaitingForSurface;
         private boolean mHaveEglContext;

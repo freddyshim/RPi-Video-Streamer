@@ -122,12 +122,14 @@ class StreamService() : Service() {
 
         fun init(context: Context, connectChecker: ConnectCheckerRtmp) {
             val newOpenGLContext = OpenGLContext()
-            val newRenderer = StreamGLRenderer(context)
+            val newRenderer = StreamGLRenderer(newOpenGLContext, context)
+            newOpenGLContext.setEGLContextClientVersion(3)
             newOpenGLContext.setRenderer(newRenderer)
             newOpenGLContext.renderMode = OpenGLContext.RENDERMODE_WHEN_DIRTY
+            newOpenGLContext.surfaceCreated(null)
             openGLContext = newOpenGLContext
-            val newCamera = UVCCamera()
-            camera = newCamera
+            renderer = newRenderer
+            camera = UVCCamera()
             srsFlvMuxer = SrsFlvMuxer(connectChecker)
             piRouter = PiRouter(context)
         }

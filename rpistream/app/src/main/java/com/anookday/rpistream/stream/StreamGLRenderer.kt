@@ -20,7 +20,7 @@ import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
 
-class StreamGLRenderer(context: Context) : OpenGLContext.Renderer, SurfaceTexture.OnFrameAvailableListener {
+class StreamGLRenderer(openGlContext: OpenGLContext, context: Context) : OpenGLContext.Renderer, SurfaceTexture.OnFrameAvailableListener {
     private val vss_default = """
             attribute vec2 vPosition;
             attribute vec2 vTexCoord;
@@ -47,6 +47,7 @@ class StreamGLRenderer(context: Context) : OpenGLContext.Renderer, SurfaceTextur
     private var pTexCoord: FloatBuffer
     private var transform: FloatArray
     private var hProgram = 0
+    private var mOpenGLContext = openGlContext
 
     private lateinit var mSTexturePi: SurfaceTexture
     private lateinit var mSTextureFront: SurfaceTexture
@@ -106,13 +107,14 @@ class StreamGLRenderer(context: Context) : OpenGLContext.Renderer, SurfaceTextur
         hProgram = loadShader(vss_default, fss_default)
 
         mGLInit = true
+
+        startBackgroundThread()
     }
 
     fun startPiCameraPreview(camera: UVCCamera, width: Int, height: Int) {
         mPiCamera = camera
         mStreamSize = Size(width, height)
-        val surface = Surface(mSTexturePi)
-        camera.setPreviewDisplay(surface)
+        camera.setPreviewTexture(mSTexturePi)
         camera.startPreview()
     }
 
@@ -286,18 +288,17 @@ class StreamGLRenderer(context: Context) : OpenGLContext.Renderer, SurfaceTextur
         GLES30.glVertexAttribPointer(tch, 2, GLES30.GL_FLOAT, false, 4 * 2, pTexCoord)
         GLES30.glEnableVertexAttribArray(ph)
         GLES30.glEnableVertexAttribArray(tch)
+        //GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
+
+        GLES30.glViewport(0, 0, mStreamSize.width, mStreamSize.height)
+        draw()
 
         if (StreamService.isStreaming) {
-            GLES30.glViewport(0, 0, mStreamSize.width, mStreamSize.height)
-            GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, frameBuffer.get(0))
-            draw()
             val buffer = ByteBuffer.allocate(mStreamSize.width * mStreamSize.height * 4)
-            GLES30.glReadBuffer(GLES30.GL_COLOR_ATTACHMENT0)
             GLES30.glReadPixels(0, 0, mStreamSize.width, mStreamSize.height, GLES30.GL_RGBA, GLES30.GL_UNSIGNED_BYTE, buffer)
             buffer.rewind()
             StreamService.stream(buffer, mStreamSize.width, mStreamSize.height)
         }
-        //GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
         //draw()
 
         GLES30.glFlush()
@@ -354,14 +355,14 @@ class StreamGLRenderer(context: Context) : OpenGLContext.Renderer, SurfaceTextur
             GLES30.GL_NEAREST
         )
         // frame buffer
-        frameBuffer = IntBuffer.allocate(1)
-        renderBuffer = IntBuffer.allocate(1)
-        GLES30.glGenFramebuffers(1, frameBuffer)
-        GLES30.glGenRenderbuffers(1, renderBuffer)
-        GLES30.glBindRenderbuffer(GLES30.GL_RENDERBUFFER, renderBuffer.get(0))
-        GLES30.glRenderbufferStorage(GLES30.GL_RENDERBUFFER, GLES30.GL_RGBA8, 1920, 1080)
-        GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, frameBuffer.get(0))
-        GLES30.glFramebufferRenderbuffer(GLES30.GL_DRAW_FRAMEBUFFER, GLES30.GL_COLOR_ATTACHMENT0, GLES30.GL_RENDERBUFFER, renderBuffer.get(0))
+        //frameBuffer = IntBuffer.allocate(1)
+        //renderBuffer = IntBuffer.allocate(1)
+        //GLES30.glGenFramebuffers(1, frameBuffer)
+        //GLES30.glGenRenderbuffers(1, renderBuffer)
+        //GLES30.glBindRenderbuffer(GLES30.GL_RENDERBUFFER, renderBuffer.get(0))
+        //GLES30.glRenderbufferStorage(GLES30.GL_RENDERBUFFER, GLES30.GL_RGBA8, 1920, 1080)
+        //GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, frameBuffer.get(0))
+        //GLES30.glFramebufferRenderbuffer(GLES30.GL_DRAW_FRAMEBUFFER, GLES30.GL_COLOR_ATTACHMENT0, GLES30.GL_RENDERBUFFER, renderBuffer.get(0))
     }
 
     private fun loadShader(vss: String, fss: String): Int {
@@ -395,6 +396,6 @@ class StreamGLRenderer(context: Context) : OpenGLContext.Renderer, SurfaceTextur
 
     override fun onFrameAvailable(surfaceTexture: SurfaceTexture?) {
         mUpdateST = true
-        //mView.requestRender()
+        mOpenGLContext.requestRender()
     }
 }
