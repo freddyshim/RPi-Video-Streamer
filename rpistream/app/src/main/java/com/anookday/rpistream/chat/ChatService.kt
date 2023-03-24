@@ -5,10 +5,6 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.hardware.usb.UsbConstants
-import android.hardware.usb.UsbDevice
-import android.hardware.usb.UsbInterface
-import android.hardware.usb.UsbManager
 import android.os.Handler
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
@@ -18,8 +14,6 @@ import com.anookday.rpistream.pi.PiRouter
 import com.anookday.rpistream.repository.database.AppDatabase
 import com.anookday.rpistream.repository.database.Message
 import com.anookday.rpistream.repository.database.getDatabase
-import com.anookday.rpistream.stream.STREAM_SERVICE_NAME
-import com.anookday.rpistream.stream.STREAM_SERVICE_NOTIFICATION_ID
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -106,20 +100,22 @@ class ChatService : Service() {
                 }
             }
             else -> {
-                val client = OkHttpClient()
-                val request = Request.Builder().url("wss://irc-ws.chat.twitch.tv:443").build()
                 intent?.extras?.getString("accessToken")?.let { accessToken ->
                     intent.extras?.getString("displayName")?.let { displayName ->
                         val twitchChatListener =
                             TwitchChatListener(
                                 this,
                                 accessToken,
-                                displayName
-                            ) { message: Message ->
-                                latestMessage = message
-                                database.messageDao.addMessageToChat(message)
-                            }
-                        webSocket = client.newWebSocket(request, twitchChatListener)
+                                displayName,
+                                { message: Message ->
+                                    latestMessage = message
+                                    database.messageDao.addMessageToChat(message)
+                                },
+                                { newWebSocket: WebSocket ->
+                                    webSocket = newWebSocket
+                                })
+
+                        webSocket = twitchChatListener.connectToWebSocket()
                         status = ChatStatus.CONNECTED
 
                         handler.postDelayed(object : Runnable {
