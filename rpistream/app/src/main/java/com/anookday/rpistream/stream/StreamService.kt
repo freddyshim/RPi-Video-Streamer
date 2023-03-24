@@ -62,6 +62,7 @@ class StreamService() : Service() {
         private var renderer: StreamGLRenderer? = null
         var width = 1920
         var height = 1080
+        private var bitmap: Bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         var videoEnabled = false
         var audioEnabled = false
         var isStreaming = false
@@ -134,14 +135,6 @@ class StreamService() : Service() {
             piRouter = PiRouter(context)
         }
 
-        /**
-         * Deallocate OpenGL resources
-         */
-        fun destroy() {
-            renderer?.onPause()
-            openGLContext?.onPause()
-        }
-
         private fun reverseBuf(buf: ByteBuffer, width: Int, height: Int) {
             var i = 0
             val tmp = ByteArray(width * 4)
@@ -162,7 +155,6 @@ class StreamService() : Service() {
         fun stream(buffer: ByteBuffer, width: Int, height: Int) {
             scope.launch {
                 reverseBuf(buffer, width, height)
-                val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
                 bitmap.copyPixelsFromBuffer(buffer)
                 val input =  IntArray(bitmap.width * bitmap.height)
                 bitmap.getPixels(input, 0, width, 0, 0, width, height)
