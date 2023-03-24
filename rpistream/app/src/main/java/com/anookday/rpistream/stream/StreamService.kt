@@ -134,6 +134,14 @@ class StreamService() : Service() {
             piRouter = PiRouter(context)
         }
 
+        /**
+         * Deallocate OpenGL resources
+         */
+        fun destroy() {
+            renderer?.onPause()
+            openGLContext?.onPause()
+        }
+
         private fun reverseBuf(buf: ByteBuffer, width: Int, height: Int) {
             var i = 0
             val tmp = ByteArray(width * 4)

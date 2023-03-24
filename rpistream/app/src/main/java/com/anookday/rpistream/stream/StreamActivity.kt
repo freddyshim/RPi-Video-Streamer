@@ -135,6 +135,7 @@ class StreamActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        StreamService.destroy()
         viewModel.prepareNavigation()
         viewModel.unregisterUsbMonitor()
         viewModel.disableCamera()
