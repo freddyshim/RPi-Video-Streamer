@@ -235,16 +235,12 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
             withContext(Dispatchers.IO) {
                 // only logged in users can toggle stream
                 user.value?.let {
-                    val intent = Intent(app.applicationContext, StreamService::class.java)
                     if (StreamService.isStreaming) {
-                        app.stopService(intent)
-                        _connectStatus.postValue(RtmpConnectStatus.DISCONNECT)
+                        stopStream()
                     } else if (StreamService.prepareStream(it.settings.videoConfig, it.settings.audioConfig)) {
                         val streamEndpoint = twitchManager.getIngestEndpoint(it.id, it.auth.accessToken)
                         if (streamEndpoint != null) {
-                            intent.putExtra("endpoint", streamEndpoint)
-                            app.startService(intent)
-                            _connectStatus.postValue(RtmpConnectStatus.SUCCESS)
+                            startStream(streamEndpoint)
                         }
                     } else {
                         _connectStatus.postValue(RtmpConnectStatus.FAIL)
@@ -252,6 +248,19 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
                 }
             }
         }
+    }
+
+    fun startStream(endpoint: String) {
+        val intent = Intent(app.applicationContext, StreamService::class.java)
+        intent.putExtra("endpoint", endpoint)
+        app.startService(intent)
+        _connectStatus.postValue(RtmpConnectStatus.SUCCESS)
+    }
+
+    fun stopStream() {
+        val intent = Intent(app.applicationContext, StreamService::class.java)
+        app.stopService(intent)
+        _connectStatus.postValue(RtmpConnectStatus.DISCONNECT)
     }
 
     /**
