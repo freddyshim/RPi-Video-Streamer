@@ -12,8 +12,6 @@ import android.media.MediaCodec
 import android.media.MediaFormat
 import android.media.MediaRecorder
 import android.os.IBinder
-import android.view.SurfaceHolder
-import android.view.SurfaceView
 import androidx.core.app.NotificationCompat
 import com.anookday.rpistream.R
 import com.anookday.rpistream.pi.CommandType
@@ -28,14 +26,13 @@ import com.pedro.encoder.utils.yuv.YUVUtil
 import com.pedro.encoder.video.FormatVideoEncoder
 import com.pedro.encoder.video.GetVideoData
 import com.pedro.encoder.video.VideoEncoder
-import com.pedro.rtplibrary.view.GlInterface
-import com.pedro.rtplibrary.view.OpenGlView
 import com.serenegiant.usb.USBMonitor
 import com.serenegiant.usb.UVCCamera
 import kotlinx.coroutines.*
 import net.ossrs.rtmp.ConnectCheckerRtmp
 import net.ossrs.rtmp.SrsFlvMuxer
 import timber.log.Timber
+import java.net.InetAddress
 import java.nio.ByteBuffer
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTimedValue
@@ -60,6 +57,9 @@ class StreamService() : Service() {
         private var piRouter: PiRouter? = null
         private var openGLContext: OpenGLContext? = null
         private var renderer: StreamGLRenderer? = null
+        private var videoEncoder: VideoEncoder? = null
+        private var audioEncoder: AudioEncoder? = null
+        private var connectChecker: ConnectCheckerRtmp? = null
         var width = 1920
         var height = 1080
         private var bitmap: Bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
@@ -70,58 +70,16 @@ class StreamService() : Service() {
         var isAeEnabled = false
 
         var videoBitrate: Int
-            get() = videoEncoder.bitRate
-            set(bitrate) = videoEncoder.setVideoBitrateOnFly(bitrate)
-
-        /**
-         * Video encoder class
-         */
-        private val videoEncoder: VideoEncoder = VideoEncoder(object : GetVideoData {
-            override fun onVideoFormat(mediaFormat: MediaFormat) {
-                videoFormat = mediaFormat
-            }
-
-            override fun onSpsPpsVps(sps: ByteBuffer, pps: ByteBuffer, vps: ByteBuffer) {
-                if (isStreaming) {
-                    srsFlvMuxer?.setSpsPPs(sps, pps)
-                }
-            }
-
-            override fun onSpsPps(sps: ByteBuffer, pps: ByteBuffer) {
-                if (isStreaming) {
-                    srsFlvMuxer?.setSpsPPs(sps, pps)
-                }
-            }
-
-            override fun getVideoData(h264Buffer: ByteBuffer, info: MediaCodec.BufferInfo) {
-                if (isStreaming) {
-                    srsFlvMuxer?.sendVideo(h264Buffer, info)
-                }
-            }
-        })
-
-        /**
-         * Audio encoder class
-         */
-        private val audioEncoder: AudioEncoder = AudioEncoder(object : GetAacData {
-            override fun onAudioFormat(mediaFormat: MediaFormat?) {
-                audioFormat = mediaFormat
-            }
-
-            override fun getAacData(aacBuffer: ByteBuffer, info: MediaCodec.BufferInfo) {
-                if (isStreaming && audioEnabled) {
-                    srsFlvMuxer?.sendAudio(aacBuffer, info)
-                }
-            }
-        })
+            get() = videoEncoder?.bitRate ?: 0
+            set(bitrate) =  videoEncoder?.setVideoBitrateOnFly(bitrate) ?: Unit
 
         /**
          * Microphone manager class
          */
         private val microphoneManager: MicrophoneManager =
-            MicrophoneManager { frame -> audioEncoder.inputPCMData(frame) }
+            MicrophoneManager { frame -> audioEncoder?.inputPCMData(frame) }
 
-        fun init(context: Context, connectChecker: ConnectCheckerRtmp) {
+        fun init(context: Context, connectCheckerRtmp: ConnectCheckerRtmp) {
             val newOpenGLContext = OpenGLContext()
             val newRenderer = StreamGLRenderer(newOpenGLContext, context)
             newOpenGLContext.setEGLContextClientVersion(3)
@@ -131,7 +89,7 @@ class StreamService() : Service() {
             openGLContext = newOpenGLContext
             renderer = newRenderer
             camera = UVCCamera()
-            srsFlvMuxer = SrsFlvMuxer(connectChecker)
+            connectChecker = connectCheckerRtmp
             piRouter = PiRouter(context)
         }
 
@@ -159,7 +117,7 @@ class StreamService() : Service() {
                 val input =  IntArray(bitmap.width * bitmap.height)
                 bitmap.getPixels(input, 0, width, 0, 0, width, height)
                 val yuvBuf = YUVUtil.ARGBtoYUV420SemiPlanar(input, width, height)
-                videoEncoder.inputYUVData(Frame(yuvBuf, 0, false, ImageFormat.NV21))
+                videoEncoder?.inputYUVData(Frame(yuvBuf, 0, false, ImageFormat.NV21))
             }
         }
 
@@ -357,7 +315,6 @@ class StreamService() : Service() {
          * Stop the current stream and preview. Destroy camera instance if initialized.
          */
         fun disableCamera() {
-            if (isStreaming) stopStream()
             if (isPreview) stopPreview()
             camera?.destroy()
             camera = null
@@ -384,6 +341,45 @@ class StreamService() : Service() {
          */
         fun prepareStream(videoConfig: VideoConfig?, audioConfig: AudioConfig?): Boolean {
             if (isStreaming) return false
+
+            srsFlvMuxer = SrsFlvMuxer(connectChecker)
+
+            videoEncoder = VideoEncoder(object : GetVideoData {
+                override fun onVideoFormat(mediaFormat: MediaFormat) {
+                    videoFormat = mediaFormat
+                }
+
+                override fun onSpsPpsVps(sps: ByteBuffer, pps: ByteBuffer, vps: ByteBuffer) {
+                    if (isStreaming) {
+                        srsFlvMuxer?.setSpsPPs(sps, pps)
+                    }
+                }
+
+                override fun onSpsPps(sps: ByteBuffer, pps: ByteBuffer) {
+                    if (isStreaming) {
+                        srsFlvMuxer?.setSpsPPs(sps, pps)
+                    }
+                }
+
+                override fun getVideoData(h264Buffer: ByteBuffer, info: MediaCodec.BufferInfo) {
+                    if (isStreaming) {
+                        srsFlvMuxer?.sendVideo(h264Buffer, info)
+                    }
+                }
+            })
+
+            audioEncoder = AudioEncoder(object : GetAacData {
+                override fun onAudioFormat(mediaFormat: MediaFormat?) {
+                    audioFormat = mediaFormat
+                }
+
+                override fun getAacData(aacBuffer: ByteBuffer, info: MediaCodec.BufferInfo) {
+                    if (isStreaming && audioEnabled) {
+                        srsFlvMuxer?.sendAudio(aacBuffer, info)
+                    }
+                }
+            })
+
             val videoCheck = prepareVideo(videoConfig)
             val audioCheck = prepareAudio(audioConfig)
             return videoCheck && audioCheck
@@ -396,15 +392,17 @@ class StreamService() : Service() {
          * @param url URL of the stream's designated location (eg. rtmp://live.twitch.tv/app/{stream_key})
          */
         fun startStream(url: String) {
-            isStreaming = true
             startEncoders()
             srsFlvMuxer?.let {
-                if (videoEncoder.rotation == 90 && videoEncoder.rotation == 270) {
-                    it.setVideoResolution(videoEncoder.height, videoEncoder.width)
-                } else {
-                    it.setVideoResolution(videoEncoder.width, videoEncoder.height)
+                videoEncoder?.let { ve ->
+                    if (ve.rotation == 90 && ve.rotation == 270) {
+                        it.setVideoResolution(ve.height, ve.width)
+                    } else {
+                        it.setVideoResolution(ve.width, ve.height)
+                    }
+                    it.start(url)
+                    isStreaming = true
                 }
-                it.start(url)
             }
         }
 
@@ -412,8 +410,8 @@ class StreamService() : Service() {
          * Prepare encoders before streaming.
          */
         private fun startEncoders() {
-            videoEncoder.start()
-            audioEncoder.start()
+            videoEncoder?.start()
+            audioEncoder?.start()
             microphoneManager.start()
         }
 
@@ -426,9 +424,9 @@ class StreamService() : Service() {
          */
         @OptIn(ExperimentalTime::class)
         private fun prepareVideo(config: VideoConfig?): Boolean {
-            if (config == null) return false
+            if (videoEncoder == null || config == null) return false
 
-            return videoEncoder.prepareVideoEncoder(
+            return videoEncoder!!.prepareVideoEncoder(
                 config.width,
                 config.height,
                 config.fps,
@@ -448,7 +446,7 @@ class StreamService() : Service() {
          * @return true if success, otherwise false.
          */
         private fun prepareAudio(config: AudioConfig?): Boolean {
-            if (config == null) return false
+            if (audioEncoder == null || config == null) return false
 
             microphoneManager.createMicrophone(
                 MediaRecorder.AudioSource.MIC,
@@ -463,7 +461,7 @@ class StreamService() : Service() {
                 it.setSampleRate(config.sampleRate)
             }
 
-            return audioEncoder.prepareAudioEncoder(
+            return audioEncoder!!.prepareAudioEncoder(
                 config.bitrate,
                 config.sampleRate,
                 config.stereo,
@@ -476,9 +474,12 @@ class StreamService() : Service() {
          */
         fun stopStream() {
             if (isStreaming) {
-                videoEncoder.stop()
-                audioEncoder.stop()
+                videoEncoder?.stop()
+                audioEncoder?.stop()
                 srsFlvMuxer?.stop()
+                videoEncoder = null
+                audioEncoder = null
+                srsFlvMuxer = null
                 isStreaming = false
             }
             streamTimer?.reset()

@@ -31,6 +31,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.WebSocket
 import timber.log.Timber
+import java.net.InetAddress
 
 enum class UsbConnectStatus { ATTACHED, DETACHED }
 enum class RtmpConnectStatus { SUCCESS, FAIL, DISCONNECT }
@@ -243,7 +244,18 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
         }
     }
 
+    private fun isInternetAvailable(): Boolean {
+        return try {
+            val ipAddr: InetAddress = InetAddress.getByName("google.com")
+            //You can replace it with your name
+            !ipAddr.equals("")
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     fun startStream(endpoint: String) {
+        if (!isInternetAvailable()) return
         val intent = Intent(app.applicationContext, StreamService::class.java)
         intent.putExtra("endpoint", endpoint)
         app.startService(intent)
@@ -574,8 +586,8 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
         }
 
         override fun onConnectionFailedRtmp(reason: String) {
-            _connectStatus.postValue(RtmpConnectStatus.FAIL)
             StreamService.stopStream()
+            _connectStatus.postValue(RtmpConnectStatus.FAIL)
         }
 
         override fun onAuthSuccessRtmp() {

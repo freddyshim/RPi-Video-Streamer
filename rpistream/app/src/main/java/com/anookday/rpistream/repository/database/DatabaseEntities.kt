@@ -103,8 +103,8 @@ data class VideoConfig(
  */
 @Entity(tableName = "user")
 data class AudioConfig(
-    val bitrate: Int = 64 * 1024,
-    val sampleRate: Int = 44100,
+    val bitrate: Int = 256 * 1024,
+    val sampleRate: Int = 32000,
     val stereo: Boolean = false,
     val echoCanceler: Boolean = false,
     val noiseSuppressor: Boolean = false
