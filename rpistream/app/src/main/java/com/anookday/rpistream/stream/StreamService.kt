@@ -29,6 +29,8 @@ import com.pedro.encoder.video.VideoEncoder
 import com.serenegiant.usb.USBMonitor
 import com.serenegiant.usb.UVCCamera
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import net.ossrs.rtmp.ConnectCheckerRtmp
 import net.ossrs.rtmp.SrsFlvMuxer
 import timber.log.Timber
@@ -46,7 +48,6 @@ const val STREAM_SERVICE_NAME = "RPi Streamer | Stream Service"
  */
 class StreamService() : Service() {
     companion object {
-        private val scope: CoroutineScope = CoroutineScope(Job() + Dispatchers.Default)
         private var usbManager: UsbManager? = null
         private var camera: UVCCamera? = null
         private var srsFlvMuxer: SrsFlvMuxer? = null
@@ -110,15 +111,13 @@ class StreamService() : Service() {
             buf.rewind()
         }
 
-        fun stream(buffer: ByteBuffer, width: Int, height: Int) {
-            scope.launch {
-                reverseBuf(buffer, width, height)
-                bitmap.copyPixelsFromBuffer(buffer)
-                val input =  IntArray(bitmap.width * bitmap.height)
-                bitmap.getPixels(input, 0, width, 0, 0, width, height)
-                val yuvBuf = YUVUtil.ARGBtoYUV420SemiPlanar(input, width, height)
-                videoEncoder?.inputYUVData(Frame(yuvBuf, 0, false, ImageFormat.NV21))
-            }
+        fun onDrawFrame(buffer: ByteBuffer, width: Int, height: Int) {
+            reverseBuf(buffer, width, height)
+            bitmap.copyPixelsFromBuffer(buffer)
+            val input =  IntArray(bitmap.width * bitmap.height)
+            bitmap.getPixels(input, 0, width, 0, 0, width, height)
+            val yuvBuf = YUVUtil.ARGBtoYUV420SemiPlanar(input, width, height)
+            videoEncoder?.inputYUVData(Frame(yuvBuf, 0, false, ImageFormat.NV21))
         }
 
         /**
@@ -220,14 +219,14 @@ class StreamService() : Service() {
                 //getAvgLumWithNd4j(byteArray, config.width, config.height)
                 //getAvgLumWithMultik(byteArray, config.width, config.height)
             }
-            Timber.d("Average Luminance: $lum")
-            Timber.d("Average luminance calculation time (ms): ${duration.inMilliseconds}")
+            //Timber.d("Average Luminance: $lum")
+            //Timber.d("Average luminance calculation time (ms): ${duration.inMilliseconds}")
 
             if (lum < minLum || lum > maxLum) {
                 exposure = (currentExposure + alpha * (scale * (targetLum - lum))).toInt()
                 if (exposure > exposureAbsoluteLimit) exposure = exposureAbsoluteLimit
                 else if (exposure < exposureAbsoluteMinimum) exposure = exposureAbsoluteMinimum
-                Timber.d("Exposure Absolute Time: $exposure")
+                //Timber.d("Exposure Absolute Time: $exposure")
                 piRouter?.routeCommand(CommandType.EXPOSURE_TIME, exposure.toString())
             }
 

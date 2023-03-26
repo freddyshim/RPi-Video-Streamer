@@ -9,6 +9,9 @@ import android.os.HandlerThread
 import android.util.Size
 import android.view.Surface
 import com.serenegiant.usb.UVCCamera
+import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -16,6 +19,7 @@ import java.nio.FloatBuffer
 import java.nio.IntBuffer
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.locks.ReentrantReadWriteLock
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
@@ -41,8 +45,6 @@ class StreamGLRenderer(openGlContext: OpenGLContext, context: Context) : OpenGLC
             }"""
 
     private lateinit var hTex: IntArray
-    private lateinit var frameBuffer: IntBuffer
-    private lateinit var renderBuffer: IntBuffer
     private var pVertex: FloatBuffer
     private var pTexCoord: FloatBuffer
     private var transform: FloatArray
@@ -288,7 +290,6 @@ class StreamGLRenderer(openGlContext: OpenGLContext, context: Context) : OpenGLC
         GLES30.glVertexAttribPointer(tch, 2, GLES30.GL_FLOAT, false, 4 * 2, pTexCoord)
         GLES30.glEnableVertexAttribArray(ph)
         GLES30.glEnableVertexAttribArray(tch)
-        //GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
 
         GLES30.glViewport(0, 0, mStreamSize.width, mStreamSize.height)
         draw()
@@ -297,9 +298,8 @@ class StreamGLRenderer(openGlContext: OpenGLContext, context: Context) : OpenGLC
             val buffer = ByteBuffer.allocate(mStreamSize.width * mStreamSize.height * 4)
             GLES30.glReadPixels(0, 0, mStreamSize.width, mStreamSize.height, GLES30.GL_RGBA, GLES30.GL_UNSIGNED_BYTE, buffer)
             buffer.rewind()
-            StreamService.stream(buffer, mStreamSize.width, mStreamSize.height)
+            StreamService.onDrawFrame(buffer, mStreamSize.width, mStreamSize.height)
         }
-        //draw()
 
         GLES30.glFlush()
     }
@@ -354,15 +354,6 @@ class StreamGLRenderer(openGlContext: OpenGLContext, context: Context) : OpenGLC
             GLES30.GL_TEXTURE_MAG_FILTER,
             GLES30.GL_NEAREST
         )
-        // frame buffer
-        //frameBuffer = IntBuffer.allocate(1)
-        //renderBuffer = IntBuffer.allocate(1)
-        //GLES30.glGenFramebuffers(1, frameBuffer)
-        //GLES30.glGenRenderbuffers(1, renderBuffer)
-        //GLES30.glBindRenderbuffer(GLES30.GL_RENDERBUFFER, renderBuffer.get(0))
-        //GLES30.glRenderbufferStorage(GLES30.GL_RENDERBUFFER, GLES30.GL_RGBA8, 1920, 1080)
-        //GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, frameBuffer.get(0))
-        //GLES30.glFramebufferRenderbuffer(GLES30.GL_DRAW_FRAMEBUFFER, GLES30.GL_COLOR_ATTACHMENT0, GLES30.GL_RENDERBUFFER, renderBuffer.get(0))
     }
 
     private fun loadShader(vss: String, fss: String): Int {
