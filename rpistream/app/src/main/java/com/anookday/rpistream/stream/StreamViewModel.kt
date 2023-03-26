@@ -119,9 +119,9 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
      * @param context Activity context
      * @param openGlView OpenGL surface view that displays the camera
      */
-    fun init(context: Context, openGlView: SurfaceView) {
+    fun init(context: Context, surfaceView: SurfaceView) {
         usbMonitor = USBMonitor(context, onDeviceConnectListener)
-        StreamService.init(context, connectCheckerRtmp)
+        StreamService.init(context, surfaceView, connectCheckerRtmp)
         registerUsbMonitor()
         connectToChat()
     }

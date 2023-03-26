@@ -294,12 +294,10 @@ class StreamGLRenderer(openGlContext: OpenGLContext, context: Context) : OpenGLC
         GLES30.glViewport(0, 0, mStreamSize.width, mStreamSize.height)
         draw()
 
-        if (StreamService.isStreaming) {
-            val buffer = ByteBuffer.allocate(mStreamSize.width * mStreamSize.height * 4)
-            GLES30.glReadPixels(0, 0, mStreamSize.width, mStreamSize.height, GLES30.GL_RGBA, GLES30.GL_UNSIGNED_BYTE, buffer)
-            buffer.rewind()
-            StreamService.onDrawFrame(buffer, mStreamSize.width, mStreamSize.height)
-        }
+        val buffer = ByteBuffer.allocate(mStreamSize.width * mStreamSize.height * 4)
+        GLES30.glReadPixels(0, 0, mStreamSize.width, mStreamSize.height, GLES30.GL_RGBA, GLES30.GL_UNSIGNED_BYTE, buffer)
+        buffer.rewind()
+        StreamService.onDrawFrame(buffer, mStreamSize.width, mStreamSize.height)
 
         GLES30.glFlush()
     }

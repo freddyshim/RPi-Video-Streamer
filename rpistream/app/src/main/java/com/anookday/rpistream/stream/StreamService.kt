@@ -6,12 +6,15 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.ImageFormat
+import android.graphics.Paint
 import android.hardware.usb.UsbManager
 import android.media.MediaCodec
 import android.media.MediaFormat
 import android.media.MediaRecorder
 import android.os.IBinder
+import android.view.SurfaceView
 import androidx.core.app.NotificationCompat
 import com.anookday.rpistream.R
 import com.anookday.rpistream.pi.CommandType
@@ -34,6 +37,7 @@ import kotlinx.coroutines.sync.withLock
 import net.ossrs.rtmp.ConnectCheckerRtmp
 import net.ossrs.rtmp.SrsFlvMuxer
 import timber.log.Timber
+import java.lang.ref.WeakReference
 import java.net.InetAddress
 import java.nio.ByteBuffer
 import kotlin.time.ExperimentalTime
@@ -61,6 +65,7 @@ class StreamService() : Service() {
         private var videoEncoder: VideoEncoder? = null
         private var audioEncoder: AudioEncoder? = null
         private var connectChecker: ConnectCheckerRtmp? = null
+        private var view: WeakReference<SurfaceView>? = null
         var width = 1920
         var height = 1080
         private var bitmap: Bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
@@ -69,6 +74,7 @@ class StreamService() : Service() {
         var isStreaming = false
         var isPreview = false
         var isAeEnabled = false
+        var drawToView = false
 
         var videoBitrate: Int
             get() = videoEncoder?.bitRate ?: 0
@@ -80,7 +86,7 @@ class StreamService() : Service() {
         private val microphoneManager: MicrophoneManager =
             MicrophoneManager { frame -> audioEncoder?.inputPCMData(frame) }
 
-        fun init(context: Context, connectCheckerRtmp: ConnectCheckerRtmp) {
+        fun init(context: Context, surfaceView: SurfaceView, connectCheckerRtmp: ConnectCheckerRtmp) {
             val newOpenGLContext = OpenGLContext()
             val newRenderer = StreamGLRenderer(newOpenGLContext, context)
             newOpenGLContext.setEGLContextClientVersion(3)
@@ -89,6 +95,7 @@ class StreamService() : Service() {
             newOpenGLContext.surfaceCreated(null)
             openGLContext = newOpenGLContext
             renderer = newRenderer
+            view = WeakReference<SurfaceView>(surfaceView)
             camera = UVCCamera()
             connectChecker = connectCheckerRtmp
             piRouter = PiRouter(context)
@@ -114,10 +121,31 @@ class StreamService() : Service() {
         fun onDrawFrame(buffer: ByteBuffer, width: Int, height: Int) {
             reverseBuf(buffer, width, height)
             bitmap.copyPixelsFromBuffer(buffer)
-            val input =  IntArray(bitmap.width * bitmap.height)
-            bitmap.getPixels(input, 0, width, 0, 0, width, height)
-            val yuvBuf = YUVUtil.ARGBtoYUV420SemiPlanar(input, width, height)
-            videoEncoder?.inputYUVData(Frame(yuvBuf, 0, false, ImageFormat.NV21))
+
+            if (isStreaming) {
+                val input =  IntArray(bitmap.width * bitmap.height)
+                bitmap.getPixels(input, 0, width, 0, 0, width, height)
+                val yuvBuf = YUVUtil.ARGBtoYUV420SemiPlanar(input, width, height)
+                videoEncoder?.inputYUVData(Frame(yuvBuf, 0, false, ImageFormat.NV21))
+            }
+
+            // send buffer to SurfaceView UI
+            if (drawToView) {
+                view?.get()?.let {
+                    val viewWidth = if (it.width > 0) it.width else 1920
+                    val viewHeight = if (it.height > 0) it.height else 1080
+                    val scaledBitmap = Bitmap.createScaledBitmap(bitmap, viewWidth, viewHeight, true)
+                    val holder = it.holder
+                    var canvas: Canvas? = null
+                    canvas = holder.lockCanvas()
+                    if (canvas == null) return@let
+                    canvas.drawBitmap(scaledBitmap, 0f, 0f, Paint())
+                    synchronized(holder) {
+                        it.onDrawForeground(canvas)
+                    }
+                    holder.unlockCanvasAndPost(canvas)
+                }
+            }
         }
 
         /**

@@ -133,16 +133,12 @@ class StreamFragment : Fragment() {
             true
         )
         super.onResume()
-        //preview.onResume()
+        StreamService.drawToView = true
     }
 
     override fun onPause() {
         super.onPause()
-        //preview.onPause()
-    }
-
-    override fun onStop() {
-        super.onStop()
+        StreamService.drawToView = true
     }
 
     /**
