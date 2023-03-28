@@ -113,15 +113,19 @@ class StreamGLRenderer(openGlContext: OpenGLContext, context: Context) : OpenGLC
         startBackgroundThread()
     }
 
-    fun startPiCameraPreview(camera: UVCCamera, width: Int, height: Int) {
+    fun startPiCameraPreview(camera: UVCCamera, width: Int, height: Int, context: Context) {
         mPiCamera = camera
         mStreamSize = Size(width, height)
         camera.setPreviewTexture(mSTexturePi)
         camera.startPreview()
+
+        startFrontCameraPreview(context)
     }
 
     fun stopPiCameraPreview() {
         mPiCamera?.stopPreview()
+        mPiCamera?.destroy()
+        mPiCamera = null
     }
 
     private fun setCameraId(context: Context) {
@@ -153,7 +157,6 @@ class StreamGLRenderer(openGlContext: OpenGLContext, context: Context) : OpenGLC
                 throw RuntimeException("Front camera not found.")
             }
             manager.openCamera(mCameraID!!, mStateCallback, mBackgroundHandler)
-            isFrontCameraOn = true
         } catch (e: CameraAccessException) {
             Timber.e("OpenCamera - Camera Access Exception")
         } catch (e: IllegalArgumentException) {
@@ -182,6 +185,17 @@ class StreamGLRenderer(openGlContext: OpenGLContext, context: Context) : OpenGLC
         } finally {
             mCameraOpenCloseLock.release()
         }
+    }
+
+    fun showFrontCamera(context: Context?) {
+        if (context != null && mCameraDevice == null) {
+            startFrontCameraPreview(context)
+        }
+        isFrontCameraOn = true
+    }
+
+    fun hideFrontCamera() {
+        isFrontCameraOn = false
     }
 
     private val mStateCallback: CameraDevice.StateCallback = object : CameraDevice.StateCallback() {

@@ -177,6 +177,10 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
         }
     }
 
+    fun destroySelfieCam() {
+        StreamService.destroyFrontCamera()
+    }
+
     /**
      * Send a command to the connected video device to toggle auto exposure.
      */
@@ -528,7 +532,8 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
                             _videoStatus.postValue(
                                 StreamService.enableCamera(
                                     ctrlBlock,
-                                    it.settings.videoConfig
+                                    it.settings.videoConfig,
+                                    app.applicationContext
                                 )
                             )
                         } catch (e: IllegalArgumentException) {

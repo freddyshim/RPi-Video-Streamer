@@ -154,11 +154,11 @@ class StreamService() : Service() {
          * @param streamWidth         Width of stream output frame in px.
          * @param height        Height of stream output frame in px.
          */
-        private fun startPreview(streamWidth: Int, streamHeight: Int) {
+        private fun startPreview(streamWidth: Int, streamHeight: Int, context: Context) {
             camera?.let {
                 width = streamWidth
                 height = streamHeight
-                renderer?.startPiCameraPreview(it, width, height)
+                renderer?.startPiCameraPreview(it, width, height, context)
                 isPreview = true
                 Timber.v("RPISTREAM preview enabled")
             }
@@ -180,20 +180,24 @@ class StreamService() : Service() {
          * @param height        Height of stream output frame in px.
          */
         fun startFrontPreview(context: Context) {
-            renderer?.startFrontCameraPreview(context)
+            renderer?.showFrontCamera(context)
         }
 
         /**
          * Stop camera preview if preview is currently enabled.
          */
         fun stopFrontPreview() {
+            renderer?.hideFrontCamera()
+        }
+
+        fun destroyFrontCamera() {
             renderer?.stopFrontCameraPreview()
         }
 
         /**
          * Enable video input for streaming.
          */
-        fun enableCamera(ctrlBlock: USBMonitor.UsbControlBlock?, config: VideoConfig?): String? {
+        fun enableCamera(ctrlBlock: USBMonitor.UsbControlBlock?, config: VideoConfig?, context: Context): String? {
             val numSkipFrames = 2
             var currentFrame = 0
             var currentExposure = 500
@@ -204,7 +208,7 @@ class StreamService() : Service() {
                 it.open(ctrlBlock)
                 if (config != null) {
                     it.setPreviewSize(config.width, config.height, UVCCamera.FRAME_FORMAT_MJPEG)
-                    startPreview(config.width, config.height)
+                    startPreview(config.width, config.height, context)
                     videoEnabled = true
                 }
                 it.setFrameCallback(

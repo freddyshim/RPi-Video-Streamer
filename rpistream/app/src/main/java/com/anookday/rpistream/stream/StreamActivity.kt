@@ -141,6 +141,7 @@ class StreamActivity : AppCompatActivity() {
     override fun onDestroy() {
         viewModel.stopStream()
         viewModel.disableCamera()
+        viewModel.destroySelfieCam()
         viewModel.unregisterUsbMonitor()
         viewModel.destroyUsbMonitor()
         viewModel.disconnectFromChat()
