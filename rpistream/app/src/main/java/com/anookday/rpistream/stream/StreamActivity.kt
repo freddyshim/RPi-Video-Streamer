@@ -1,14 +1,14 @@
 package com.anookday.rpistream.stream
 
+import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.media.AudioManager
-import android.opengl.GLSurfaceView
 import android.os.Bundle
-import android.provider.Settings
 import android.view.MenuItem
+import android.view.SurfaceView
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -33,6 +33,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
+import java.lang.reflect.Field
+
 
 /**
  * Activity that encompasses all stream related fragments and view models.
@@ -57,6 +59,8 @@ class StreamActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        disableSurfaceViewLogging()
 
         //val myIntent = Intent()
         //myIntent.action = Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS
@@ -135,9 +139,10 @@ class StreamActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        viewModel.prepareNavigation()
-        viewModel.unregisterUsbMonitor()
+        viewModel.stopStream()
         viewModel.disableCamera()
+        viewModel.destroySelfieCam()
+        viewModel.unregisterUsbMonitor()
         viewModel.destroyUsbMonitor()
         viewModel.disconnectFromChat()
         unregisterBluetooth()
@@ -216,5 +221,17 @@ class StreamActivity : AppCompatActivity() {
                 DrawerLayout.LOCK_MODE_LOCKED_CLOSED
             }
         )
+    }
+
+    @SuppressLint("SoonBlockedPrivateApi")
+    private fun disableSurfaceViewLogging() {
+        try {
+            val field: Field = SurfaceView::class.java.getDeclaredField("DEBUG")
+            field.isAccessible = true
+            field.set(null, false)
+            Timber.i("SurfaceView debug disabled")
+        } catch (e: Exception) {
+            Timber.e(e)
+        }
     }
 }

@@ -8,6 +8,7 @@ import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbInterface
 import android.hardware.usb.UsbManager
 import android.opengl.GLSurfaceView
+import android.view.SurfaceView
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
@@ -30,6 +31,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.WebSocket
 import timber.log.Timber
+import java.net.InetAddress
 
 enum class UsbConnectStatus { ATTACHED, DETACHED }
 enum class RtmpConnectStatus { SUCCESS, FAIL, DISCONNECT }
@@ -65,9 +67,6 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
 
     // usb manager
     var usbManager = app.getSystemService(Context.USB_SERVICE) as UsbManager
-
-    // GLSurfaceView renderer
-    private var viewRenderer: StreamGLRenderer? = null
 
     // USB monitor object used to control connected USB devices
     private var usbMonitor: USBMonitor? = null
@@ -120,10 +119,9 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
      * @param context Activity context
      * @param openGlView OpenGL surface view that displays the camera
      */
-    fun init(context: Context, openGlView: StreamGLSurfaceView) {
+    fun init(context: Context, surfaceView: SurfaceView) {
         usbMonitor = USBMonitor(context, onDeviceConnectListener)
-        viewRenderer = openGlView.renderer
-        StreamService.init(openGlView, connectCheckerRtmp)
+        StreamService.init(context, surfaceView, connectCheckerRtmp)
         registerUsbMonitor()
         connectToChat()
     }
@@ -171,10 +169,16 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
             val newToggleStatus = !it
             _selfieToggleStatus.value = newToggleStatus
 
-            viewRenderer?.let { renderer ->
-                if (newToggleStatus) renderer.startFrontCameraPreview() else renderer.stopFrontCameraPreview()
+            if (newToggleStatus) {
+                StreamService.startFrontPreview(app.applicationContext)
+            } else {
+                StreamService.stopFrontPreview()
             }
         }
+    }
+
+    fun destroySelfieCam() {
+        StreamService.destroyFrontCamera()
     }
 
     /**
@@ -192,16 +196,14 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
      * Connect to UVCCamera if video is disabled. Otherwise, disable video.
      */
     fun toggleVideo() {
-        if (!StreamService.isStreaming) {
-            if (videoStatus.value == null) {
-                val deviceList = usbManager.deviceList
-                if (deviceList.isNotEmpty()) {
-                    val device: UsbDevice = deviceList.values.elementAt(0)
-                    usbMonitor?.requestPermission(device)
-                }
-            } else {
-                disableCamera()
+        if (videoStatus.value == null) {
+            val deviceList = usbManager.deviceList
+            if (deviceList.isNotEmpty()) {
+                val device: UsbDevice = deviceList.values.elementAt(0)
+                usbMonitor?.requestPermission(device)
             }
+        } else {
+            disableCamera()
         }
     }
 
@@ -209,14 +211,12 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
      * Enable or disable audio recording.
      */
     fun toggleAudio() {
-        if (!StreamService.isStreaming) {
-            if (_audioStatus.value == null) {
-                _audioStatus.value = app.getString(R.string.audio_on_text)
-                StreamService.enableAudio()
-            } else {
-                _audioStatus.value = null
-                StreamService.disableAudio()
-            }
+        if (_audioStatus.value == null) {
+            _audioStatus.value = app.getString(R.string.audio_on_text)
+            StreamService.enableAudio()
+        } else {
+            _audioStatus.value = null
+            StreamService.disableAudio()
         }
     }
 
@@ -233,16 +233,12 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
             withContext(Dispatchers.IO) {
                 // only logged in users can toggle stream
                 user.value?.let {
-                    val intent = Intent(app.applicationContext, StreamService::class.java)
                     if (StreamService.isStreaming) {
-                        app.stopService(intent)
-                        _connectStatus.postValue(RtmpConnectStatus.DISCONNECT)
+                        stopStream()
                     } else if (StreamService.prepareStream(it.settings.videoConfig, it.settings.audioConfig)) {
                         val streamEndpoint = twitchManager.getIngestEndpoint(it.id, it.auth.accessToken)
                         if (streamEndpoint != null) {
-                            intent.putExtra("endpoint", streamEndpoint)
-                            app.startService(intent)
-                            _connectStatus.postValue(RtmpConnectStatus.SUCCESS)
+                            startStream(streamEndpoint)
                         }
                     } else {
                         _connectStatus.postValue(RtmpConnectStatus.FAIL)
@@ -250,6 +246,30 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
                 }
             }
         }
+    }
+
+    private fun isInternetAvailable(): Boolean {
+        return try {
+            val ipAddr: InetAddress = InetAddress.getByName("google.com")
+            //You can replace it with your name
+            !ipAddr.equals("")
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    fun startStream(endpoint: String) {
+        if (!isInternetAvailable()) return
+        val intent = Intent(app.applicationContext, StreamService::class.java)
+        intent.putExtra("endpoint", endpoint)
+        app.startService(intent)
+        _connectStatus.postValue(RtmpConnectStatus.SUCCESS)
+    }
+
+    fun stopStream() {
+        val intent = Intent(app.applicationContext, StreamService::class.java)
+        app.stopService(intent)
+        _connectStatus.postValue(RtmpConnectStatus.DISCONNECT)
     }
 
     /**
@@ -512,7 +532,8 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
                             _videoStatus.postValue(
                                 StreamService.enableCamera(
                                     ctrlBlock,
-                                    it.settings.videoConfig
+                                    it.settings.videoConfig,
+                                    app.applicationContext
                                 )
                             )
                         } catch (e: IllegalArgumentException) {
@@ -570,8 +591,8 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
         }
 
         override fun onConnectionFailedRtmp(reason: String) {
-            _connectStatus.postValue(RtmpConnectStatus.FAIL)
             StreamService.stopStream()
+            _connectStatus.postValue(RtmpConnectStatus.FAIL)
         }
 
         override fun onAuthSuccessRtmp() {

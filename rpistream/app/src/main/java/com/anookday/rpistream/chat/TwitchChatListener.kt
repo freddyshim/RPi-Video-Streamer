@@ -1,13 +1,15 @@
 package com.anookday.rpistream.chat
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import com.anookday.rpistream.R
 import com.anookday.rpistream.repository.database.Message
-import okhttp3.Response
-import okhttp3.WebSocket
-import okhttp3.WebSocketListener
+import okhttp3.*
 import timber.log.Timber
 import java.util.*
+import java.util.regex.Matcher
+import java.util.regex.Pattern
 
 const val NORMAL_CLOSURE_STATUS = 1000
 
@@ -18,7 +20,8 @@ class TwitchChatListener(
     private val context: Context,
     private val authToken: String,
     username: String,
-    private val displayMessage: (message: Message) -> Unit
+    private val displayMessage: (message: Message) -> Unit,
+    private val onReconnect: (webSocket: WebSocket) -> Unit
 ) : WebSocketListener() {
 
     private val name = username.toLowerCase(Locale.ROOT)
@@ -56,12 +59,34 @@ class TwitchChatListener(
         displayMessage(Message(MessageType.SYSTEM, context.getString(R.string.chat_disconnected_msg)))
     }
 
+    //override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+    //    Timber.e("web socket failed: ${t.message}")
+    //    Timber.e(t)
+    //    super.onFailure(webSocket, t, response)
+    //    // alert user that they are disconnected from chat
+    //    displayMessage(Message(MessageType.SYSTEM, context.getString(R.string.chat_disconnected_msg)))
+    //}
+
     override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
         Timber.e("web socket failed: ${t.message}")
         Timber.e(t)
         super.onFailure(webSocket, t, response)
         // alert user that they are disconnected from chat
         displayMessage(Message(MessageType.SYSTEM, context.getString(R.string.chat_disconnected_msg)))
+
+        // attempt to reconnect after a delay
+        Handler(Looper.getMainLooper()).postDelayed({
+            val newWebSocket = connectToWebSocket()
+            onReconnect(newWebSocket)
+        }, 5000)
+    }
+
+    fun connectToWebSocket(): WebSocket {
+        // create new OkHttpClient and request objects
+        val client = OkHttpClient()
+        val request = Request.Builder().url("wss://irc-ws.chat.twitch.tv:443").build()
+        // create new web socket and start listening
+        return client.newWebSocket(request, this)
     }
 
     /**
@@ -70,11 +95,21 @@ class TwitchChatListener(
      */
     fun parseMessage(text: String): Message {
         val username = "^.*?display-name=([^;]*)".toRegex().find(text)?.groupValues?.get(1)
-        val color = "^.*?color=([^;]*)".toRegex().find(text)?.groupValues?.get(1) ?: "#FFFFFF"
+        var color = "^.*?color=([^;]*)".toRegex().find(text)?.groupValues?.get(1)
+        if (color == null || !isHexadecimal(color)) {
+            color = "#000000"
+        }
         val message = "(?<=#$name\\s:).*".toRegex().find(text)?.value
         if (username != null && message != null) {
             return Message(MessageType.USER, message, username, color)
         }
         return Message(MessageType.USER, "Error parsing chat message.", "Error")
+    }
+
+    private val mHexPattern: Pattern = Pattern.compile("^#[0-9A-F]{6}\$")
+
+    private fun isHexadecimal(input: String): Boolean {
+        val matcher: Matcher = mHexPattern.matcher(input)
+        return matcher.matches()
     }
 }
