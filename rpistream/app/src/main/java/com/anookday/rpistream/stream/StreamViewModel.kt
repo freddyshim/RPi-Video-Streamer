@@ -564,6 +564,9 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
         override fun onDisconnect(device: UsbDevice?, ctrlBlock: USBMonitor.UsbControlBlock?) {
             Timber.v("onDeviceConnectListener: Device disconnected")
             viewModelScope.launch {
+                if (StreamService.isStreaming) {
+                    stopStream()
+                }
                 StreamService.disableCamera()
                 _videoStatus.postValue(null)
             }
