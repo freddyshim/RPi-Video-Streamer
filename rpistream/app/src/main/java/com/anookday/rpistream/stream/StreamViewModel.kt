@@ -594,7 +594,7 @@ class StreamViewModel(app: Application) : UserViewModel(app) {
         }
 
         override fun onConnectionFailedRtmp(reason: String) {
-            StreamService.stopStream()
+            stopStream()
             _connectStatus.postValue(RtmpConnectStatus.FAIL)
         }
 
