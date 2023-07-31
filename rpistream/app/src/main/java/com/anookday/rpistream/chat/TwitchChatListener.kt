@@ -36,18 +36,29 @@ class TwitchChatListener(
     }
 
     override fun onMessage(webSocket: WebSocket, text: String) {
-        Timber.v("message received: $text")
-        // handle various types of messages from web socket connection
-        with(text) {
+        for (msg in text.split("\r?\n|\r".toRegex())) {
+            Timber.d("incoming message: %s", msg)
+            // handle various types of messages from web socket connection
             when {
-                contains("PRIVMSG") -> displayMessage(parseMessage(text))
-                // PING message; issue a PONG message back to keep the connection alive
-                contains("PING") -> webSocket.send("PONG :tmi.twitch.tv")
-                // message indicating that the user has joined the chat channel
-                contains("366") -> displayMessage(Message(MessageType.SYSTEM, context.getString(R.string.chat_connected_msg)))
-                // discard other messages
-                else -> {
+                msg.contains("PRIVMSG") -> {
+                    val message = parseRawMessage(msg)
+                    if (message != null) {
+                        displayMessage(parseMessage(message))
+                    }
                 }
+                msg.contains("USERNOTICE") -> {
+                    val message = parseRawMessage(msg)
+                    if (message != null) {
+                        displayMessage(Message(MessageType.SYSTEM, message.parameters ?: "unknown user notice message"))
+                    }
+                }
+                msg.startsWith(":tmi.twitch.tv CAP * ACK :", true) -> Timber.d(msg)
+                // PING message; issue a PONG message back to keep the connection alive
+                msg.equals("PING :tmi.twitch.tv", true) -> webSocket.send("PONG :tmi.twitch.tv")
+                // message indicating that the user has joined the chat channel
+                msg.contains("366") -> displayMessage(Message(MessageType.SYSTEM, context.getString(R.string.chat_connected_msg)))
+                // discard other messages
+                else -> {}
             }
         }
     }
@@ -58,14 +69,6 @@ class TwitchChatListener(
         // alert user that they are connected to chat
         displayMessage(Message(MessageType.SYSTEM, context.getString(R.string.chat_disconnected_msg)))
     }
-
-    //override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-    //    Timber.e("web socket failed: ${t.message}")
-    //    Timber.e(t)
-    //    super.onFailure(webSocket, t, response)
-    //    // alert user that they are disconnected from chat
-    //    displayMessage(Message(MessageType.SYSTEM, context.getString(R.string.chat_disconnected_msg)))
-    //}
 
     override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
         Timber.e("web socket failed: ${t.message}")
@@ -93,23 +96,116 @@ class TwitchChatListener(
      * Convert string to UserMessage object.
      * @param text line of text received from web socket
      */
-    fun parseMessage(text: String): Message {
-        val username = "^.*?display-name=([^;]*)".toRegex().find(text)?.groupValues?.get(1)
-        var color = "^.*?color=([^;]*)".toRegex().find(text)?.groupValues?.get(1)
-        if (color == null || !isHexadecimal(color)) {
-            color = "#000000"
-        }
-        val message = "(?<=#$name\\s:).*".toRegex().find(text)?.value
+    fun parseMessage(msg: ChatMessage): Message {
+        val username = msg.tags?.displayName ?: msg.source?.nick
+        val color = msg.tags?.color ?: "#000000"
+        val message = msg.parameters
         if (username != null && message != null) {
             return Message(MessageType.USER, message, username, color)
         }
         return Message(MessageType.USER, "Error parsing chat message.", "Error")
     }
 
-    private val mHexPattern: Pattern = Pattern.compile("^#[0-9A-F]{6}\$")
+    private fun parseRawMessage(message: String): ChatMessage? {
+        if (message.isEmpty()) return null
 
-    private fun isHexadecimal(input: String): Boolean {
-        val matcher: Matcher = mHexPattern.matcher(input)
-        return matcher.matches()
+        var idx = 0
+        var rawTags = ""
+        var rawSource = ""
+        var rawCommand = ""
+        var rawParameters = ""
+        Timber.v(message)
+
+        // if the message includes tags, get the tags component of the IRC message
+        if (message[idx] == '@') {
+            val endIdx = message.indexOf(' ')
+            rawTags = message.slice(1 until endIdx)
+            idx = endIdx + 1
+        }
+
+        // get the source component of the IRC message
+        if (message[idx] == ':') {
+            idx += 1
+            val endIdx = message.indexOf(' ', idx)
+            rawSource = message.slice(idx until endIdx)
+            idx = endIdx + 1
+        }
+
+        // get the command component of the IRC message
+        var endIdx = message.indexOf(':', idx)
+        if (endIdx == -1) {
+            endIdx = message.length
+        }
+        rawCommand = message.slice(idx until endIdx).trim()
+
+        // get the parameters component of the IRC message
+        if (endIdx != message.length) {
+            idx = endIdx + 1
+            rawParameters = message.slice(idx until message.length)
+        }
+
+        return ChatMessage(
+            tags = parseMessageTags(rawTags),
+            source = parseMessageSource(rawSource),
+            command = parseMessageCommand(rawCommand),
+            parameters = rawParameters
+        )
     }
+
+    private fun parseMessageTags(tags: String): ChatMessageTags {
+        val tagsToIgnore = setOf("client-nonce", "flags")
+        val parsedTagsMap = mutableMapOf<String, String?>()
+        val parsedTags = tags.split(';')
+        for (tag in parsedTags) {
+            val parsedTag = tag.split('=')
+            val tagValue = if (parsedTag.size > 1) parsedTag[1] else null
+            if (!tagsToIgnore.contains(parsedTag[0])) {
+                parsedTagsMap[parsedTag[0]] = tagValue
+            }
+        }
+        return ChatMessageTags(parsedTagsMap)
+    }
+
+    private fun parseMessageCommand(command: String): ChatMessageCommand? {
+        val commandParts = command.split(' ')
+
+        return when (commandParts[0]) {
+            "JOIN", "PART", "NOTICE", "CLEARCHAT", "HOSTTARGET", "PRIVMSG", "USERSTATE", "ROOMSTATE", "001" -> {
+                ChatMessageCommand(command = commandParts[0], channel = commandParts[1])
+            }
+            "PING", "GLOBALUSERSTATE", "RECONNECT" -> {
+                ChatMessageCommand(command = commandParts[0])
+            }
+            "CAP" -> {
+                ChatMessageCommand(
+                    command = commandParts[0],
+                    isCapRequestEnabled = commandParts[2] == "ACK"
+                )
+            }
+            "421" -> {
+                Timber.i("unsupported IRC command: ${commandParts[2]}")
+                null
+            }
+            "002", "003", "004", "353", "366", "372", "375", "376" -> {
+                Timber.i("numeric message: ${commandParts[0]}")
+                null
+            }
+            else -> {
+                Timber.i("unexpected command: ${commandParts[0]}")
+                null
+            }
+        }
+    }
+
+    private fun parseMessageSource(source: String?): ChatMessageSource? {
+        if (source == null) {
+            return null
+        }
+
+        val sourceParts = source.split('!')
+        val nick = if (sourceParts.size == 2) sourceParts[0] else null
+        val host = if (sourceParts.size == 2) sourceParts[1] else sourceParts[0]
+        return ChatMessageSource(nick, host)
+    }
+
 }

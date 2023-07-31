@@ -40,6 +40,7 @@ class ChatService : Service() {
         var status: ChatStatus = ChatStatus.DISCONNECTED
     }
 
+
     /**
      * Send a message to the chat web socket.
      */
@@ -73,17 +74,14 @@ class ChatService : Service() {
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         val channel = NotificationChannel(
-            CHAT_SERVICE_NAME,
-            CHAT_SERVICE_NAME,
-            NotificationManager.IMPORTANCE_LOW
+            CHAT_SERVICE_NAME, CHAT_SERVICE_NAME, NotificationManager.IMPORTANCE_LOW
         )
         notificationManager?.createNotificationChannel(channel)
 
-        val notificationBuilder = NotificationCompat.Builder(this, CHAT_SERVICE_NAME)
-            .setOngoing(true)
-            .setContentTitle(CHAT_SERVICE_NAME)
-            .setSmallIcon(R.drawable.raspi_pgb001)
-            .setContentText("Connected to chat")
+        val notificationBuilder =
+            NotificationCompat.Builder(this, CHAT_SERVICE_NAME).setOngoing(true)
+                .setContentTitle(CHAT_SERVICE_NAME).setSmallIcon(R.drawable.raspi_pgb001)
+                .setContentText("Connected to chat")
 
         startForeground(CHAT_SERVICE_NOTIFICATION_ID, notificationBuilder.build())
     }
@@ -107,11 +105,11 @@ class ChatService : Service() {
                                 this,
                                 accessToken,
                                 displayName,
-                                { message: Message ->
+                                displayMessage = { message: Message ->
                                     latestMessage = message
                                     database.messageDao.addMessageToChat(message)
                                 },
-                                { newWebSocket: WebSocket ->
+                                onReconnect = { newWebSocket: WebSocket ->
                                     webSocket = newWebSocket
                                 })
 
