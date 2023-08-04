@@ -504,6 +504,7 @@ class StreamService() : Service() {
          * Stops the stream.
          */
         fun stopStream() {
+            Timber.d("stopping stream...")
             if (isStreaming) {
                 videoEncoder?.stop()
                 audioEncoder?.stop()
